@@ -63,7 +63,7 @@ def lattice(shape, mass, absolute_charge, distance, radius):
 
     return Integrator(x, v, m, q, r)
 
-def random(N, x = (0,100), v = (0,10), m = (1E3,5E2), q = (0,1E-5), r = (0,2)):
+def random(N, x = (0,20), v = (0,10), m = (100,10), q = (0,1E-4), r = (1,1)):
     N = int(N)
     p = 2
     x = np.random.normal(x[0], x[1], (N,p))
@@ -95,7 +95,7 @@ class Counter:
             t_avg = np.mean(np.diff(self.times[:self.counter]))
             eta = t_avg*(self.tot_iter - self.counter)
             dd = int((eta//86400))
-            hh = int((eta//3600)%60)
+            hh = int((eta//3600)%24)
             mm = int((eta//60)%60)
             ss = int(eta%60)
             msg = f"\r\t{self.perc:>3d}% – "
@@ -107,10 +107,15 @@ class Counter:
 
     def close(self):
         dt = time() - self.t0
-        hh = int(dt//3600)
+        dd = int((dt//86400))
+        hh = int(dt//3600)%24
         mm = int((dt//60)%60)
         ss = int(dt%60)
-        print(f"\r\t100% – Total Time Elapsed {hh:02d}:{mm:02d}:{ss:02d}")
+        msg = ""
+        if dd > 0:
+            msg += f"{dd:d} day(s) + "
+        msg += f"{hh:02d}:{mm:02d}:{ss:02d}"
+        print(f"\r\t100% – Total Time Elapsed {msg}")
 
 class Particle:
 
@@ -206,48 +211,76 @@ class Integrator:
         self.r = np.concatenate([self.r, [particle.r]])
         self.attribute_reset()
 
-    def test_GPU(self):
+    def test_GPU(self, collision):
         """
             If the GPU improves performance, returns True
             return False otherwise
         """
-        if cupy_imported:
-            a = np.random.normal(0,0.5,(self.N, 3))
-            b = np.random.normal(0,0.5,(self.N, 3))
+        if not cupy_imported:
+            return False
 
-            a_gpu = cp.array(a.copy())
-            b_gpu = cp.array(b.copy())
+        times = []
+
+        for mod, GPU in zip([cp, np], [True, False]):
+            a = mod.random.normal(0,0.5,(self.N, 3))
+            b = mod.random.normal(0,0.5,(self.N, 1))
 
             t0 = time()
-            for i in range(100):
-                c = a * b - a[0]
-                c += c*0.1/2**3
-                np.sum(c, axis = 0)
-                np.linalg.norm(c)
-            t1 = time()
+            foo = mod.linalg.norm(a*b, axis = 1)[:,np.newaxis]
+            for n in range(0, 10):
+                foo = self.arr_delete(a, n, GPU, axis = 0)
+                foo = self.arr_delete(a, n, GPU, axis = 0)
+                c = self.arr_delete(a, n, GPU, axis = 0) - a[n]
+                d = mod.linalg.norm(c, axis = 1)[:,np.newaxis]
+                e = d*a[n]/0.5
+                f = mod.sum(e*c/d, axis = 0)
+                if collision:
+                    f = f + self._a_collision(b, b, a, a, c, d, n, 0.01, GPU,
+                                              mod, 0.01)
+                foo = a + 0.5*a
+            times.append(time() - t0)
+        return times[0] < times[1]
 
-            t0_gpu = time()
-            for i in range(100):
-                c_gpu = a_gpu * b_gpu - a_gpu[0]
-                c_gpu += c_gpu*0.1/2**3
-                cp.sum(c, axis = 0)
-                cp.linalg.norm(c_gpu)
-            t1_gpu = time()
+    def _a_collision(self, m, radius, x, v, r, r_norm, n, cf, GPU, mod, dt):
+        m2 = self.arr_delete(m, n, GPU, axis = 0)
+        v2 = self.arr_delete(v, n, GPU, axis = 0)
+        radius_step = self.arr_delete(radius, n, GPU, axis = 0)
+        f_col = v2*(m[n]-m2)/(m[n]+m2) + 2*m2*v[n]/(m[n]+m2)
+        f_col = mod.linalg.norm(f_col, axis = 1)[:,np.newaxis]
+        col_idx = (r_norm <= radius_step+radius[n]).flatten()
+        step = f_col[col_idx]*r[col_idx]/r_norm[col_idx]
+        return -cf*mod.sum(step, axis = 0)/dt
 
-            return (t1_gpu - t0_gpu) < (t1 - t0)
-        return False
+    def arr_delete(self, arr, n, GPU, axis):
+        if n == 0:
+            return arr[n+1:]
+        elif n == arr.shape[0] - 1:
+            return arr[:n]
+        elif GPU is True:
+            return cp.concatenate([arr[:n], arr[n+1:]])
+        else:
+            return np.delete(arr, n, axis = axis)
 
-    def solve(self, T, dt, collision = True, GPU = None):
+    def solve(self, T, dt, collision = True, GPU = None, debug = True):
         self.T, self.dt = T, dt
 
         # Selecting cupy or numpy depending on system/simulation parameters
         if GPU is None:
-            GPU = self.test_GPU()
+            GPU = self.test_GPU(collision)
 
         if cupy_imported is True and GPU:
             mod = cp
+            GPU_active = "Active"
         else:
             mod = np
+            GPU_active = "Inactive"
+
+        if debug:
+            msg = (f"\nSIMULATION INFO:\n\n\tParticles\t\t{self.N:d}\n\t"
+                   f"Dimensions\t\t{self.p:d}\n\tT\t\t\t{T:g}\n\tdt\t\t\t"
+                   f"{dt:g}\n\tSteps\t\t\t{T//dt:g}\n\tCUDA\t\t\t{GPU_active}"
+                   f"\n\nSTATUS:\n")
+            print(msg)
 
         steps = int(T//dt)
         if steps*dt < T:
@@ -270,90 +303,53 @@ class Integrator:
         # Scientific Constants
         G = 6.67408E-11
         k = 8.9875517887E9
-        eps = 2# Depth of collision potential well
-        R1,R2 = mod.meshgrid(radius, radius)
-        A = (4*eps*(R1+R2)**12)[:,:,mod.newaxis]
-        B = (4*eps*(R1+R2)**6)[:,:,mod.newaxis]
-        col_cutoff = 0.99
-        cf = 0.5# Collision force coefficient
-        counter = Counter(2*steps*self.N)
+        col_cutoff = 0.5
+        # Collision force coefficient
+        cf = 0.5
+        if debug:
+            counter = Counter(2*steps*self.N)
+        arange = np.arange(0,self.N,1)
 
         # Velocity Verlet Integration
         for m in range(1, steps):
             p_step = mod.linalg.norm(mass*v[m-1], axis = 1)[:,np.newaxis]
             for n in range(0, self.N):
-                a = 0
-                if n > 0:
-                    r = x[m-1,:n]-x[m-1,n]
-                    r_norm = mod.linalg.norm(r, axis = 1)[:,np.newaxis]
-                    forces = G*mass[:n] + k*charge[:n]*charge[n]/mass[n]
-                    a = a + mod.sum(forces*r/r_norm, axis = 0)
-                    if collision:
-                        m1 = mass[n]
-                        m2 = mass[:n]
-                        f_col = v[m-1,n]*(1 - 2*m2/(m1+m2))
-                        f_col = f_col + v[m-1,:n]*(m2/m1)*(1 - (m2-m1)/(m1+m2))
-                        f_col = mod.linalg.norm(f_col, axis = 1)[:,np.newaxis]
-                        col_idx = (r_norm <= radius[:n]+radius[n]).flatten()
-                        step = f_col*r/r_norm
-                        a = a - cf*mod.sum(step[col_idx], axis = 0)/dt
-
-                if n < self.N - 1:
-                    r = x[m-1,n+1:]-x[m-1,n]
-                    r_norm = mod.linalg.norm(r, axis = 1)[:,np.newaxis]
-                    forces = G*mass[n+1:] + k*charge[n+1:]*charge[n]/mass[n]
-                    a = a + mod.sum(forces*r/r_norm, axis = 0)
-                    if collision:
-                        m1 = mass[n]
-                        m2 = mass[n+1:]
-                        f_col = v[m-1,n]*(1 - 2*m2/(m1+m2))
-                        f_col = f_col + v[m-1,n+1:]*(m2/m1)*(1 - (m2-m1)/(m1+m2))
-                        f_col = mod.linalg.norm(f_col, axis = 1)[:,np.newaxis]
-                        col_idx = (r_norm <= radius[n+1:]+radius[n]).flatten()
-                        step = f_col*r/r_norm
-                        a = a - cf*mod.sum(step[col_idx], axis = 0)/dt
-
+                m1 = mass[n]
+                m2 = self.arr_delete(mass, n, GPU, axis = 0)
+                charge_step = self.arr_delete(charge, n, GPU, axis = 0)
+                r = self.arr_delete(x[m-1], n, GPU, axis = 0) - x[m-1,n]
+                r_norm = mod.linalg.norm(r, axis = 1)[:,np.newaxis]
+                forces = G*m2 + k*charge_step*charge[n]/m1
+                a = mod.sum(forces*r/r_norm, axis = 0)
+                if collision:
+                    a = a + self._a_collision(mass, radius, x[m-1], v[m-1], r,
+                                              r_norm, n, cf, GPU, mod, dt)
                 v_half[n] = v[m-1,n] + dt*0.5*a
                 x[m,n] = x[m-1,n] + dt*v_half[n]
-                counter()
+                if debug:
+                    counter()
 
             p_step = mod.linalg.norm(mass*v[m], axis = 1)[:,np.newaxis]
-            for n in range(0, self.N):
-                a = 0
-                if n > 0:
-                    r = x[m,:n]-x[m,n]
-                    r_norm = mod.linalg.norm(r, axis = 1)[:,np.newaxis]
-                    forces = G*mass[:n] + k*charge[:n]*charge[n]/mass[n]
-                    a = a + mod.sum(forces*r/r_norm, axis = 0)
-                    if collision:
-                        m1 = mass[n]
-                        m2 = mass[:n]
-                        f_col = v[m,n]*(1 - 2*m2/(m1+m2))
-                        f_col = f_col + v[m,:n]*(m2/m1)*(1 - (m2-m1)/(m1+m2))
-                        f_col = mod.linalg.norm(f_col, axis = 1)[:,np.newaxis]
-                        col_idx = (r_norm <= radius[:n]+radius[n]).flatten()
-                        step = f_col*r/r_norm
-                        a = a - cf*mod.sum(step[col_idx], axis = 0)/dt
+            a = 0
 
-                if n < self.N - 1:
-                    r = x[m,n+1:]-x[m,n]
-                    r_norm = mod.linalg.norm(r, axis = 1)[:,np.newaxis]
-                    forces = G*mass[n+1:] + k*charge[n+1:]*charge[n]/mass[n]
-                    a = a + mod.sum(forces*r/r_norm, axis = 0)
-                    if collision:
-                        m1 = mass[n]
-                        m2 = mass[n+1:]
-                        f_col = v[m,n]*(1 - 2*m2/(m1+m2))
-                        f_col = f_col + v[m,n+1:]*(m2/m1)*(1 - (m2-m1)/(m1+m2))
-                        f_col = mod.linalg.norm(f_col, axis = 1)[:,np.newaxis]
-                        col_idx = (r_norm <= radius[n+1:]+radius[n]).flatten()
-                        step = f_col*r/r_norm
-                        a = a - cf*mod.sum(step[col_idx], axis = 0)/dt
+            for n in range(0, self.N):
+                m1 = mass[n]
+                m2 = self.arr_delete(mass, n, GPU, axis = 0)
+                charge_step = self.arr_delete(charge, n, GPU, axis = 0)
+                r = self.arr_delete(x[m], n, GPU, axis = 0) - x[m,n]
+                r_norm = mod.linalg.norm(r, axis = 1)[:,np.newaxis]
+                forces = G*m2 + k*charge_step*charge[n]/m1
+                a = mod.sum(forces*r/r_norm, axis = 0)
+                if collision:
+                    a = a + self._a_collision(mass, radius, x[m], v[m], r,
+                                              r_norm, n, cf, GPU, mod, dt)
                 v[m,n] = v_half[n] + dt*0.5*a
-                counter()
+                if debug:
+                    counter()
 
         del v_half
-        counter.close()
+        if debug:
+            counter.close()
 
         # Converting back to numpy, if cupy is used
         if cupy_imported is True and GPU:
@@ -378,35 +374,63 @@ class Integrator:
         fig, ax = plt.subplots()
         ax.set_aspect("equal")
         fig.set_size_inches(15, 9)
-        # ln = plt.scatter(self.x[0,:,0], self.x[0,:,1], color=np.random.rand(self.N, 3))
-        # ln.set_sizes(sizes)
         plt.axis('off')
         fig.set_facecolor("k")
 
+        colors_g = np.linalg.norm(self.v, axis = 2)
+        colors_g = np.log(colors_g + np.min(colors_g) + 1E-5)
+        cg_min = np.min(colors_g.flatten())
+        cg_max = np.max(colors_g.flatten())
+        colors_g = 1-((colors_g - cg_min)/(cg_max-cg_min))
+
         circles = []
-        for i,j,k,l,m in zip(self.x[0], self.v[0], self.m, self.q, self.r):
-            circles.append(Circle(tuple(i), m, color = np.random.rand(3)))#, color = "w"))
-            # circles.append(Circle(tuple(i), m, color = "w"))
+        for i,j,k in zip(self.x[0], self.r, colors_g[0]):
+            circles.append(Circle(tuple(i), j, color = (1,k,0)))
             ax.add_artist(circles[-1])
 
         def init():
-            xlim = (np.min(self.x[:,:,0]), np.max(self.x[:,:,0]))
-            ylim = (np.min(self.x[:,:,1]), np.max(self.x[:,:,1]))
-            limit = xlim if xlim[1]-xlim[0] >= ylim[1]-ylim[0] else ylim
-            ax.set_xlim(limit[0], limit[1])
-            ax.set_ylim(limit[0], limit[1])
+            xlim = (np.min(self.x[0,:,0]-self.r), np.max(self.x[0,:,0]+self.r))
+            ylim = (np.min(self.x[0,:,1]-self.r), np.max(self.x[0,:,1]+self.r))
+            scale = xlim if xlim[1]-xlim[0] >= ylim[1]-ylim[0] else ylim
+            scale = scale[1] - scale[0]
+            if xlim[1]-xlim[0] >= ylim[1]-ylim[0]:
+                y_mid = (ylim[1] - ylim[0])/2 + ylim[0]
+                y_max = y_mid + scale/2
+                y_min = y_mid - scale/2
+                ax.set_xlim(xlim[0], xlim[1])
+                ax.set_ylim(y_min, y_max)
+            else:
+                x_mid = (xlim[1] - xlim[0])/2 + xlim[0]
+                x_max = x_mid + scale/2
+                x_min = x_mid - scale/2
+                ax.set_xlim(x_min, x_max)
+                ax.set_ylim(ylim[0], ylim[1])
             return
 
-        def update(frame):
+        def update(m):
             for n,c in enumerate(circles):
-                c.center = tuple(frame[n])
+                c.center = tuple(self.x[m,n])
+                c.set_color((1,colors_g[m,n],0))
+            xlim = (np.min(self.x[m,:,0]-self.r), np.max(self.x[m,:,0]+self.r))
+            ylim = (np.min(self.x[m,:,1]-self.r), np.max(self.x[m,:,1]+self.r))
+            scale = xlim if xlim[1]-xlim[0] >= ylim[1]-ylim[0] else ylim
+            scale = scale[1] - scale[0]
+            if xlim[1]-xlim[0] >= ylim[1]-ylim[0]:
+                y_mid = (ylim[1] - ylim[0])/2 + ylim[0]
+                y_max = y_mid + scale/2
+                y_min = y_mid - scale/2
+                ax.set_xlim(xlim[0], xlim[1])
+                ax.set_ylim(y_min, y_max)
+            else:
+                x_mid = (xlim[1] - xlim[0])/2 + xlim[0]
+                x_max = x_mid + scale/2
+                x_min = x_mid - scale/2
+                ax.set_xlim(x_min, x_max)
+                ax.set_ylim(ylim[0], ylim[1])
             return
 
-        # def update(frame):
-        #     ln.set_offsets(frame)
-        #     return ln
-
-        ani = FuncAnimation(fig, update, frames = self.x, init_func = init,
+        frames = np.arange(0, self.x.shape[0], 1)
+        ani = FuncAnimation(fig, update, frames = frames, init_func = init,
                             blit = False, interval = 25)
         if savename is None:
             plt.show()
@@ -418,6 +442,7 @@ class Integrator:
                      savefig_kwargs={'facecolor':fig.get_facecolor(),
                                      'repeat':True})
             plt.close()
+        print()
 
     def save(self, dirname = "nBody_save_"):
         if dirname[-1] == "_":
@@ -450,14 +475,16 @@ class Integrator:
 
 if __name__ == "__main__":
 
-    # I = load("large_15K")
-    # I.animate("test2")
-    # L = lattice((6, 6), 1E3, 1E-4, 2.5, 1)
-    # P1 = Particle((-5, 6), (10, 0), 1E3, 0, 2)
+    filename = "test"
+    dir = "saved"
+    # L = load(f"{dir}/{filename}")
+    # L = lattice((6, 6), 1E2, 1E-4, 2.01, 1)
+    # P1 = Particle((-10, 6), (50, 0), 1E4, 0, 3)
     # P2 = Particle((-20, 6), (10, 0), 1E4, -1E-3, 1)
     # L.add(P1)
     # L.add(P2)
-    L = random(1E3)
-    L.solve(10, 1E-2)
-    L.save("small_1K")
-    L.animate("small_1K/small_1K")
+    L = random(100)
+    L.solve(2, 1E-2, collision = True)
+    L.save(f"{dir}/{filename}")
+    # L.animate()
+    L.animate(f"{dir}/{filename}/{filename}")
