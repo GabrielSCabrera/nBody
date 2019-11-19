@@ -20,8 +20,8 @@ Animated *matplotlib* visualizations included for 2-D simulation.
 Using *numpy* arrays, you will need:
 
 * An initial position array ```x``` with shape ```(N,p)```
-    * N is the number of particles
-    * p is the number of dimensions
+    * *N* is the number of *particles*
+    * *p* is the number of *dimensions*
 * An initial velocity array ```v``` with shape ```(N,p)```
 * An array of masses ```m```with shape ```(N,)```
 * An array of charges ```q``` with shape ```(N,)```
