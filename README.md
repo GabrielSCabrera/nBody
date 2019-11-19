@@ -5,10 +5,11 @@ Create complex particle simulations the easy way: a high-level package for desig
 
 ## Features
 
-Easy to use and fast, **nBody** can simulate:
+Easy to use – and fast – **nBody** can be used to simulate:
 
-* Gravitational and Coulomb interactions
-* Particle collisions (optional)
+* Gravitational acceleration
+* Coulomb interactions
+* Particle collisions
 
 **nBody** is highly optimized:
 
