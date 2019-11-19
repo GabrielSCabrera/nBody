@@ -13,9 +13,9 @@ Easy to use – and fast – **nBody** can be used to simulate:
 
 **nBody** is highly optimized:
 
-* Automatic GPU acceleration with [```cupy```](https://cupy.chainer.org "cuPY")
+* GPU acceleration through [```cupy```](https://cupy.chainer.org "cuPY")
 * CPU multiprocessing available via [```numpy```](https://numpy.org/ "NumPy")
-* Energy conservation with *velocity-verlet*
+* Energy conservation via the *velocity-verlet* algorithm
 
 Animated [```matplotlib```](https://matplotlib.org/ "Matplotlib") visualizations included for 2-D simulation.
 
