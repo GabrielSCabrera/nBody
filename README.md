@@ -13,15 +13,15 @@ Easy to use – and fast – **nBody** can be used to simulate:
 
 **nBody** is highly optimized:
 
-* Automatic GPU acceleration with *cupy*
-* CPU multiprocessing available via *numpy*
+* Automatic GPU acceleration with ```cupy```
+* CPU multiprocessing available via ```numpy```
 * Energy conservation with *velocity-verlet*
 
-Animated *matplotlib* visualizations included for 2-D simulation.
+Animated ```matplotlib``` visualizations included for 2-D simulation.
 
 ## Quick-Start
 
-Using *numpy* arrays, you will need:
+Using ```numpy``` arrays, you will need:
 
 * An initial position array ```x``` with shape ```(N,p)```
     * *N* is the number of *particles*
