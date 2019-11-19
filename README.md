@@ -1,5 +1,5 @@
-### nBody
-# GPU-accelerated N-Body particle simulator with visualizer.
+# nBody
+### GPU-accelerated N-Body particle simulator with visualizer.
 
 ## Features
 
