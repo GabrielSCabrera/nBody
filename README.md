@@ -1,5 +1,5 @@
 ### nBody
-#GPU-accelerated N-Body particle simulator with visualizer.
+# GPU-accelerated N-Body particle simulator with visualizer.
 
 ## Features
 
@@ -35,7 +35,7 @@ A possible configuration is as follows:
     m = np.random.normal(8,    1, (N, ))
     q = np.random.normal(0, 1E-6, (N, ))
     r = np.random.normal(1,  0.1, (N, ))
-    
+
     m[m < 0] = np.abs(m[m < 0])
     m[m == 0] = 1E-3
 
