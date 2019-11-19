@@ -76,6 +76,8 @@ def rand(N, x = (0,5E4), v = (0,5E2), m = (1E6,1E5), q = (0,1), r = (1E2,1E1)):
     m[m == 0] = 1
     q = np.random.normal(q[0], q[1], N)
     r = np.random.normal(r[0], r[1], N)
+    r[r < 0] = np.abs(r[r < 0])
+    r[r == 0] = 1
     return Simulation(x, v, m, q, r)
 
 class Counter:
