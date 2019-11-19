@@ -646,7 +646,7 @@ class Integrator:
         # Creates a human-readable log with info on simulation parameters
         with open(f"{dirname}/log.txt", "w+") as outfile:
             outfile.write(self.simulation_info())
-
+git remote set-url origin git@github.com:gabrielscabrera/nBody.git
 if __name__ == "__main__":
 
     filename = "temp"
