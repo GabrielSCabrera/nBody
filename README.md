@@ -29,29 +29,29 @@ Using *numpy* arrays, you will need:
 
 A possible configuration is as follows:
 
-  import numpy as np
-  x = np.random.normal(0,   10, (N,p))
-  v = np.random.normal(0,    2, (N,p))
-  m = np.random.normal(8,    1, (N, ))
-  q = np.random.normal(0, 1E-6, (N, ))
-  r = np.random.normal(1,  0.1, (N, ))
-
-  m[m < 0] = np.abs(m[m < 0])
-  m[m == 0] = 1E-3
+    import numpy as np
+    x = np.random.normal(0,   10, (N,p))
+    v = np.random.normal(0,    2, (N,p))
+    m = np.random.normal(8,    1, (N, ))
+    q = np.random.normal(0, 1E-6, (N, ))
+    r = np.random.normal(1,  0.1, (N, ))
+    
+    m[m < 0] = np.abs(m[m < 0])
+    m[m == 0] = 1E-3
 
 Next, pass these arrays in the given order to a ```Simulation``` object, so as to create a new instance ```S```.
 
-  from particles import Simulation
-  S = Simulation(x, v, m, q, r)
+    from particles import Simulation
+    S = Simulation(x, v, m, q, r)
 
 After selected a simulation runtime ```T``` and time-step ```dt```, use the ```solve``` method to calculate the particles' approximate trajectories.
 
-  S.solve(T, dt)
+    S.solve(T, dt)
 
 If the dimension is such that ```p == 2```, an animation can then created and saved to file.  
 
-  S.animate("quick_start")
+    S.animate("quick_start")
 
 Once ```solve``` has been called, it is also possible to save the ```Simulation``` instance to file.
 
-  S.save("quick_start")
+    S.save("quick_start")
