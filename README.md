@@ -5,7 +5,7 @@ Create complex particle simulations the easy way: a high-level package for desig
 
 ## Features
 
-Easy to use – and fast – **nBody** can be used to simulate:
+Easy to use – and fast – **nBody** can simulate:
 
 * Gravitational acceleration
 * Coulomb interactions
@@ -13,11 +13,11 @@ Easy to use – and fast – **nBody** can be used to simulate:
 
 **nBody** is highly optimized:
 
-* GPU acceleration through [```cupy```](https://cupy.chainer.org "cuPY")
-* CPU multiprocessing available via [```numpy```](https://numpy.org/ "NumPy")
+* GPU acceleration available via [```cupy```](https://cupy.chainer.org "cuPY")
+* CPU multiprocessing with [```numpy```](https://numpy.org/ "NumPy")
 * Energy conservation via the *velocity-verlet* algorithm
 
-Animated [```matplotlib```](https://matplotlib.org/ "Matplotlib") visualizations included for 2-D simulation.
+Animated [```matplotlib```](https://matplotlib.org/ "Matplotlib") visualizations included for 2-D simulations.
 
 ## Quick-Start
 
@@ -48,14 +48,14 @@ Next, pass these arrays in the given order to a ```Simulation``` object, so as t
     from particles import Simulation
     S = Simulation(x, v, m, q, r)
 
-After selected a simulation runtime ```T``` and time-step ```dt```, use the ```solve``` method to calculate the particles' approximate trajectories.
+After selecting a simulation runtime ```T``` and time-step ```dt```, use the ```solve``` method to calculate the particles' trajectories.
 
     S.solve(T, dt)
 
-If the dimension is such that ```p == 2```, an animation can then created and saved to file.  
+If the system is 2-D such that ```p == 2```, an animation can be created and saved to file; here, the filename ```quick_start``` is chosen, and will produce a file ```animations/quick_start.mp4```.  
 
     S.animate("quick_start")
 
-Once ```solve``` has been called, it is also possible to save the ```Simulation``` instance to file.
+Once ```solve``` has been called, it is also possible to save the ```Simulation``` instance to file; in this case, the data will be saved to a directory ```saved/quick_start```.
 
     S.save("quick_start")
