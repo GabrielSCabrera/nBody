@@ -1,5 +1,7 @@
 # nBody
-### GPU-accelerated N-Body particle simulator with visualizer.
+### A GPU-accelerated N-body particle simulator and animator
+
+Create complex particle simulations the easy way: a high-level package for designing and simulating large-scale particle interactions. Let **nBody** do the hard work for you!
 
 ## Features
 
@@ -12,6 +14,7 @@ Easy to use and fast, **nBody** can simulate:
 
 * Automatic GPU acceleration with *cupy*
 * CPU multiprocessing available via *numpy*
+* Energy conservation with *velocity-verlet*
 
 Animated *matplotlib* visualizations included for 2-D simulation.
 
