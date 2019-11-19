@@ -26,7 +26,7 @@ def load(dirname):
     q = np.load(f"{dirname}/arr/q.npy")
     r = np.load(f"{dirname}/arr/r.npy")
 
-    I = Integrator(x[0], v[0], m, q, r)
+    I = Simulation(x[0], v[0], m, q, r)
     I.t, I.x, I.v = t, x, v
 
     with open(f"{dirname}/metadata.dat") as infile:
@@ -64,7 +64,7 @@ def lattice(shape, mass, absolute_charge, distance, radius):
     x = np.zeros_like(v)
     x[:,0], x[:,1] = X.flatten(), Y.flatten()
 
-    return Integrator(x, v, m, q, r)
+    return Simulation(x, v, m, q, r)
 
 def rand(N, x = (0,5E4), v = (0,5E2), m = (1E6,1E5), q = (0,1), r = (1E2,1E1)):
     N = int(N)
@@ -76,7 +76,7 @@ def rand(N, x = (0,5E4), v = (0,5E2), m = (1E6,1E5), q = (0,1), r = (1E2,1E1)):
     m[m == 0] = 1
     q = np.random.normal(q[0], q[1], N)
     r = np.random.normal(r[0], r[1], N)
-    return Integrator(x, v, m, q, r)
+    return Simulation(x, v, m, q, r)
 
 class Counter:
 
@@ -147,7 +147,7 @@ class Particle:
         self.q = np.array(charge)
         self.r = np.array(radius)
 
-class Integrator:
+class Simulation:
 
     def __init__(self, positions, velocities, masses, charges, radii):
         """
@@ -327,12 +327,12 @@ class Integrator:
         """
             Returns a string of information about the ongoing simulation
         """
-        if self.GPU_active:
+        if self.GPU_active is True:
             GPU = "Active"
         else:
             GPU = "Inactive"
 
-        if self.collision:
+        if self.collision is True:
             col = "Active"
         else:
             col = "Inactive"
@@ -351,10 +351,10 @@ class Integrator:
         # If GPU is selected or overwritten, uses cupy.  Uses numpy otherwise
         if cupy_imported is True and GPU:
             mod = cp
-            self.GPU_active = "Active"
+            self.GPU_active = True
         else:
             mod = np
-            self.GPU_active = "Inactive"
+            self.GPU_active = False
 
         # Calculating number of steps to take in integration
         steps = int(T//dt)
@@ -588,6 +588,9 @@ class Integrator:
             # Display the animation in an interactive session
             plt.show()
         else:
+            # Create a folder in which to save files
+            if not os.path.isdir("animations"):
+                os.mkdir("animations")
             # Setting the video background to black
             savefig_kwargs = {'facecolor':fig.get_facecolor(),
                               'repeat':True}
@@ -600,11 +603,15 @@ class Integrator:
             # Save the animation to file using ffmpeg
             Writer = writers['ffmpeg']
             writer = Writer(fps = 60, metadata = metadata, bitrate = 2500)
-            anim.save(f"{savename}.mp4", writer = writer,
+            anim.save(f"animations/{savename}.mp4", writer = writer,
                       savefig_kwargs = savefig_kwargs)
             plt.close()
 
     def save(self, dirname = "nBody_save_"):
+        # Create a folder in which to save files
+        if not os.path.isdir("saved"):
+            os.mkdir("saved")
+        dirname = f"saved/{dirname}"
         # If dirname ends in "_", will automatically number the save directory
         if dirname[-1] == "_":
             ID = 0.0
@@ -649,16 +656,6 @@ class Integrator:
 
 if __name__ == "__main__":
 
-    filename = "temp"
-    directory = "saved"
-    # L = load(f"{directory}/{filename}")
-    # L = lattice((10, 10), 1E2, 1E-5, 2.01, 1.25)
-    # P1 = Particle((-20, 16*0.5*1.3), (100, 0), 1E6, 0, 1)
-    # P2 = Particle((16*1.3+20, 16*0.5*1.3), (-100, 0), 1E6, 0, 1)
-    # L.add(P1)
-    # L.add(P2)
-    L = rand(100)
-    L.solve(2, 1E-2, collision = True)
-    # L.save(f"{directory}/{filename}")
-    L.animate()
-    # L.animate(f"{directory}/{filename}/{filename}")
+    msg = ("To see an example of this program, run the files in the 'samples'"
+           " directory, or take a look at the README.")
+    print(msg)
