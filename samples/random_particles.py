@@ -9,7 +9,7 @@ filename = "random_particles"
 # Initializing a Simulation() object via the rand() function
 L = rand(100)
 
-T = 1
+T = 0.5
 dt = 1E-3
 
 # Solving for the given T and dt

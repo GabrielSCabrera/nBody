@@ -7,14 +7,14 @@ from particles import lattice, Particle
 filename = "collision_lattice"
 
 # Lattice parameters
-lattice_kwargs = {"shape":(10,10), "mass":1E2, "absolute_charge":1E-5,
+lattice_kwargs = {"shape":(10,10), "mass":1E2, "absolute_charge":1E-6,
                   "distance":1, "radius":0.5}
 
 # Initializing a Simulation() object via the lattice() function
 L = lattice(**lattice_kwargs)
 
-x1, x2 = (-20, -20), (30, 30)
-v1, v2 = (100, 100), (-100, -100)
+x1, x2 = (-15, -5), (25, 25)
+v1, v2 = (100, 90), (-110, -100)
 m1, m2 = 1E6, 1E6
 q1, q2 = 1E-5, -1E-5
 r1, r2 = 0.1, 0.1
@@ -27,7 +27,7 @@ P2 = Particle(x2, v2, m2, q2, r2)
 L.add(P1)
 L.add(P2)
 
-T = 1
+T = 0.5
 dt = 1E-3
 
 # Solving for the given T and dt

@@ -66,7 +66,7 @@ def lattice(shape, mass, absolute_charge, distance, radius):
 
     return Simulation(x, v, m, q, r)
 
-def rand(N, x = (0,5E4), v = (0,5E2), m = (1E6,1E5), q = (0,1), r = (1E2,1E1)):
+def rand(N, x = (0,100), v = (0,100), m = (1E7,1E5), q = (0,1E-5), r = (1,0.1)):
     N = int(N)
     p = 2
     x = np.random.normal(x[0], x[1], (N,p))
@@ -392,7 +392,7 @@ class Simulation:
         # Electrostatic constant
         k = 8.9875517887E9
         # Collision force coefficient
-        cf = 1
+        cf = 0.5
 
         # Initilize countdown timer
         if debug:
@@ -608,6 +608,9 @@ class Simulation:
             anim.save(f"animations/{savename}.mp4", writer = writer,
                       savefig_kwargs = savefig_kwargs)
             plt.close()
+            # Play the video
+            file_path = f"{os.getcwd()}/animations/{savename}.mp4"
+            os.system(f'xdg-open {file_path}')
 
     def save(self, dirname = "nBody_save_"):
         # Create a folder in which to save files
