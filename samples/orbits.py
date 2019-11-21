@@ -7,7 +7,7 @@ from particles import Simulation
 # Filename for saving results
 filename = "orbits"
 
-N = 10000
+N = 100
 
 x = (0,80)
 v = (0,2)
