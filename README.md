@@ -17,7 +17,7 @@ Easy to use – and fast – **nBody** can simulate:
 * CPU multiprocessing with [```numpy```](https://numpy.org/ "NumPy")
 * Energy conservation via the *velocity-verlet* algorithm
 
-Animated [```matplotlib```](https://matplotlib.org/ "Matplotlib") visualizations included for 2-D simulations.
+Animated [```matplotlib```](https://matplotlib.org/ "Matplotlib") visualizations included for 2-D simulations. 3-D animations are also supported through the use of [```vpython```](https://vpython.org/ "VPython").
 
 ## Quick-Start
 
@@ -48,13 +48,15 @@ Next, pass these arrays in the given order to a ```Simulation``` object, so as t
     from particles import Simulation
     S = Simulation(x, v, m, q, r)
 
-After selecting a simulation runtime ```T``` and time-step ```dt```, use the ```solve``` method to calculate the particles' trajectories.
+After selecting a simulation runtime ```T``` and (optional) time-step ```dt```, use the ```solve``` method to calculate the particles' trajectories.
 
     S.solve(T, dt)
 
 If the system is 2-D such that ```p == 2```, an animation can be created and saved to file; here, the filename ```quick_start``` is chosen, and will produce a file ```animations/quick_start.mp4```.  
 
     S.animate("quick_start")
+
+If the system is 3-D, animations can still be created, but cannot be saved to file – simply omit the string shown above, and no warnings will be raise.
 
 Once ```solve``` has been called, it is also possible to save the ```Simulation``` instance to file; in this case, the data will be saved to a directory ```saved/quick_start```.
 

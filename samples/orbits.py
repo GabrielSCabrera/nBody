@@ -9,8 +9,6 @@ filename = "orbits"
 
 N = 10000
 
-# Initializing a Simulation() object via the rand() function
-
 x = (0,100)
 v = (0,0.5)
 m = (1E9,1E6)

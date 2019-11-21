@@ -1,10 +1,22 @@
 from matplotlib.animation import FuncAnimation, writers
+import matplotlib.animation as animation
 from matplotlib.patches import Circle
 import matplotlib.pyplot as plt
 from time import time
 import numpy as np
 import datetime
 import os
+
+try:
+    import vpython as vp
+    vpython_imported = True
+except ImportError:
+    vpython_imported = False
+    warning_msg = ("\033[01mWARNING\033[m: Module \033[03mvpython\033[m is not"
+                   " installed on this system. \033[03mvpython\033[m is "
+                   "required to enable 3-D animation.")
+    print(warning_msg)
+
 try:
     import cupy as cp
     cupy_imported = True
@@ -66,9 +78,8 @@ def lattice(shape, mass, absolute_charge, distance, radius):
 
     return Simulation(x, v, m, q, r)
 
-def rand(N, x = (0,100), v = (0,100), m = (1E7,1E5), q = (0,1E-5), r = (1,0.1)):
+def rand(N, p = 2, x = (0,100), v = (0,100), m = (1E7,1E5), q = (0,1E-5), r = (1,0.1)):
     N = int(N)
-    p = 2
     x = np.random.normal(x[0], x[1], (N,p))
     v = np.random.normal(v[0], v[1], (N,p))
     m = np.random.normal(m[0], m[1], N)
@@ -345,7 +356,11 @@ class Simulation:
                    f"\t\t\t{GPU}\n\tCollisions\t\t{col}")
         return msg
 
-    def solve(self, T, dt, collision = True, GPU = None, debug = True):
+    def solve(self, T, dt = None, collision = True, GPU = None, debug = True):
+        # Auto-selecting dt if None
+        if dt is None:
+            dt = T/500
+
         # Auto-selecting cupy or numpy depending on system/simulation
         if GPU is None:
             GPU = self._test_GPU(collision)
@@ -481,6 +496,16 @@ class Simulation:
         self.v = v
 
     def animate(self, savename = None):
+        if self.p == 2:
+            self.animate_2D(savename)
+        elif self.p == 3:
+            # Warns the user if savename is not none
+            msg = (f"Cannot save 3-D animations to file – unsupported feature")
+            if savename is not None:
+                print(msg)
+            self.animate_3D()
+
+    def animate_2D(self, savename = None):
 
         # Checks if the current simulation is 2-D, raises an error otherwise
         if self.p != 2:
@@ -611,6 +636,58 @@ class Simulation:
             # Play the video
             file_path = f"{os.getcwd()}/animations/{savename}.mp4"
             os.system(f'xdg-open {file_path}')
+
+    def _set_color_pos(self, n, x, color_g):
+        self.spheres_temp[n].pos.x = x[0]
+        self.spheres_temp[n].pos.y = x[1]
+        self.spheres_temp[n].pos.z = x[2]
+        self.spheres_temp[n].color.x = 1 - color_g
+        self.spheres_temp[n].color.z = color_g
+
+    def animate_3D(self, savename = None):
+
+        # Checks if vpython was successfully imported
+        if not vpython_imported:
+            raise ImportError("Package 'vpython' required for 3-D animation")
+
+        # Checks if the current simulation is 2-D, raises an error otherwise
+        if self.p != 3:
+            raise NotImplemented("Can only perform 3-D animation")
+
+        # Selecting how much green will be used for each particle at each
+        # time step.  RGB is used with R = 1 and B = 0.  G is varied between
+        # 0 and 1 depending on the particle's speed in time
+
+        # Calculating particle speeds
+        speeds = np.linalg.norm(self.v, axis = 2)
+        # Rescaling the speeds logarithmically
+        speeds_scaled = np.log(speeds + np.min(speeds) + 1E-15)
+        # Maximum log of shifted speed
+        v_min = np.min(speeds_scaled, axis = 1)[:,np.newaxis]
+        # Minimum log of shifted speed
+        v_max = np.max(speeds_scaled, axis = 1)[:,np.newaxis]
+        # Rescaling the speeds in range 0,1 and subtracting from 1
+        colors_g = 1-((speeds_scaled - v_min)/(v_max-v_min))
+
+        # Initializing the circles as a list and appending them to the plot
+        self.spheres_temp = []
+        for i,j,k in zip(self.x[0], self.r, colors_g[0]):
+            # Creating a circle with initial position, radius, and RGB color
+            pos = vp.vector(i[0], i[1], i[2])
+            rgb = vp.vector(1,k,0)
+            sphere = vp.sphere(pos = pos, radius = 10*j/np.max(self.r),
+                               color = rgb)
+            self.spheres_temp.append(sphere)
+
+        while True:
+            for m in range(self.x.shape[0]):
+                vp.rate(32)
+                # Iterating through each sphere, for a single step with index m
+                for n,s in enumerate(spheres):
+                    # Moving all circles to their new centers
+                    s.pos = vp.vector(self.x[m,n,0],self.x[m,n,1],self.x[m,n,2])
+                    # Adjusting the green setting depending on current speed
+                    s.color = vp.vector(1 - colors_g[m,n], 0, colors_g[m,n])
 
     def save(self, dirname = "nBody_save_"):
         # Create a folder in which to save files

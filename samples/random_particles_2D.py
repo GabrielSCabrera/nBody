@@ -4,13 +4,13 @@ sys.path.append("..")
 from particles import rand
 
 # Random particles filename
-filename = "random_particles"
+filename = "random_particles_3D"
 
 # Initializing a Simulation() object via the rand() function
 L = rand(100)
 
-T = 0.5
-dt = 1E-3
+T = 10
+dt = 1E-2
 
 # Solving for the given T and dt
 L.solve(T, dt, collision = True)
