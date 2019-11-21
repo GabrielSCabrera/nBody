@@ -34,11 +34,11 @@ Using ```numpy``` arrays, you will need:
 A possible configuration is as follows:
 
     import numpy as np
-    x = np.random.normal(0,   10, (N,p))
-    v = np.random.normal(0,    2, (N,p))
-    m = np.random.normal(8,    1, (N, ))
-    q = np.random.normal(0, 1E-6, (N, ))
-    r = np.random.normal(1,  0.1, (N, ))
+    x = np.random.normal(0,   10, (N,p)) # Positions
+    v = np.random.normal(0,    2, (N,p)) # Velocities
+    m = np.random.normal(8,    1, (N, )) # Masses
+    q = np.random.normal(0, 1E-6, (N, )) # Charges
+    r = np.random.normal(1,  0.1, (N, )) # Radii
 
     m[m < 0] = np.abs(m[m < 0])
     m[m == 0] = 1E-3
@@ -56,8 +56,8 @@ If the system is 2-D such that ```p == 2```, an animation can be created and sav
 
     S.animate("quick_start")
 
-If the system is 3-D, animations can still be created, but cannot be saved to file – simply omit the string shown above, and no warnings will be raise.
+If the system is 3-D such that ```p == 3```, animations can be created but not saved to file – simply omit the string shown above, and no warnings will be raised.
 
-Once ```solve``` has been called, it is also possible to save the ```Simulation``` instance to file; in this case, the data will be saved to a directory ```saved/quick_start```.
+Once the ```solve``` method has been called, it is also possible to save the ```Simulation``` instance to file; in this case, the data will be saved to a directory ```saved/quick_start```.
 
     S.save("quick_start")
