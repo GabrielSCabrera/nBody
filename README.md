@@ -56,7 +56,7 @@ If the system is 2-D such that ```p == 2```, an animation can be created and sav
 
     S.animate("quick_start")
 
-If the system is 3-D such that ```p == 3```, animations can be created but not saved to file – simply omit the string shown above, and no warnings will be raised.
+If the system is 3-D such that ```p == 3```, animations can be created but not saved to file – simply omit the string argument shown above, and no warnings will be raised.
 
 Once the ```solve``` method has been called, it is also possible to save the ```Simulation``` instance to file; in this case, the data will be saved to a directory ```saved/quick_start```.
 
