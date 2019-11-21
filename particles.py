@@ -545,12 +545,22 @@ class Simulation:
             # Adding the above circle to the plot
             ax.add_artist(circles[-1])
 
+        # Number of standard deviations to focus animation on
+        devs = 3
+
         # Animation initialization function
         def init():
+            x0, x1 = self.x[0,:,0], self.x[0,:,1]
+            cond_0 = np.abs(x0 - np.mean(x0)) <= devs*np.std(x0)
+            cond_1 = np.abs(x1 - np.mean(x1)) <= devs*np.std(x1)
+            idx = np.logical_and(cond_0, cond_1)
+            # Removing outliers
+            x0 = x0[idx]
+            x1 = x1[idx]
             # Calculating the limits of x, compensating for particle radius
-            xlim = np.min(self.x[0,:,0]-self.r), np.max(self.x[0,:,0]+self.r)
+            xlim = np.min(x0-self.r[idx]), np.max(x0+self.r[idx])
             # Calculating the limits of y, compensating for particle radius
-            ylim = np.min(self.x[0,:,1]-self.r), np.max(self.x[0,:,1]+self.r)
+            ylim = np.min(x1-self.r[idx]), np.max(x1+self.r[idx])
             # Choosing the largest scale from xlim or ylim
             scale = xlim if xlim[1]-xlim[0] >= ylim[1]-ylim[0] else ylim
             # Taking the difference to calculate the largest scale
@@ -580,10 +590,18 @@ class Simulation:
                 # Adjusting the green setting depending on current speed
                 c.set_color((1,colors_g[m,n],0))
 
+            x0, x1 = self.x[m,:,0], self.x[m,:,1]
+            cond_0 = np.abs(x0 - np.mean(x0)) <= devs*np.std(x0)
+            cond_1 = np.abs(x1 - np.mean(x1)) <= devs*np.std(x1)
+            idx = np.logical_and(cond_0, cond_1)
+            # Removing outliers
+            x0 = x0[idx]
+            x1 = x1[idx]
+
             # Calculating the limits of x, compensating for particle radius
-            xlim = (np.min(self.x[m,:,0]-self.r), np.max(self.x[m,:,0]+self.r))
+            xlim = (np.min(x0-self.r[idx]), np.max(x0+self.r[idx]))
             # Calculating the limits of y, compensating for particle radius
-            ylim = (np.min(self.x[m,:,1]-self.r), np.max(self.x[m,:,1]+self.r))
+            ylim = (np.min(x1-self.r[idx]), np.max(x1+self.r[idx]))
             # Choosing the largest scale from xlim or ylim
             scale = xlim if xlim[1]-xlim[0] >= ylim[1]-ylim[0] else ylim
             # Taking the difference to calculate the largest scale
@@ -670,14 +688,14 @@ class Simulation:
         colors_g = 1-((speeds_scaled - v_min)/(v_max-v_min))
 
         # Initializing the circles as a list and appending them to the plot
-        self.spheres_temp = []
+        spheres = []
         for i,j,k in zip(self.x[0], self.r, colors_g[0]):
             # Creating a circle with initial position, radius, and RGB color
             pos = vp.vector(i[0], i[1], i[2])
             rgb = vp.vector(1,k,0)
             sphere = vp.sphere(pos = pos, radius = 10*j/np.max(self.r),
                                color = rgb)
-            self.spheres_temp.append(sphere)
+            spheres.append(sphere)
 
         while True:
             for m in range(self.x.shape[0]):

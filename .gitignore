@@ -103,6 +103,7 @@ venv.bak/
 # saved files
 /saved
 /animations
+test.py
 
 # mypy
 .mypy_cache/

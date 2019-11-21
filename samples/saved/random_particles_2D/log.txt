@@ -2,9 +2,9 @@
 SIMULATION INFO:
 
 	Particles		100
-	Dimensions		2
-	T			0.5
-	dt			0.001
-	Steps			499
+	Dimensions		3
+	T			1
+	dt			0.01
+	Steps			99
 	CUDA			Inactive
 	Collisions		Active
