@@ -51,31 +51,26 @@ def load(dirname):
     return I
 
 def lattice(shape, mass, absolute_charge, distance, radius):
-    if len(shape) != 2:
-        raise NotImplemented("Can currently only create 2-D lattice")
-
-    ch_shape = list(shape)
-    ch_shape[0] = np.max([shape[0]//2, 2])
-    ch_shape[1] = np.max([shape[1]//2, 2])
-    checker = [[1, 0] * ch_shape[0], [0, 1] * ch_shape[0]] * ch_shape[1]
-    q = (absolute_charge*(np.kron(checker, np.ones((1, 1)))*2 - 1)).flatten()
-
-    m = mass*np.ones_like(q)
-    r = radius*np.ones_like(q)
-
-    shape = list(shape)
-    shape[0] = np.max([shape[0], 2])
-    shape[1] = np.max([shape[1], 2])
+    shape = np.array(shape)
+    p = shape.ndim
     N = np.prod(shape)
 
-    v = np.zeros((N,2))
+    x0 = np.ones((N,p))
+    v0 = np.zeros((N,p))
+    m = np.ones(N)
+    q = np.ones(N)
+    r = np.ones(N)
 
-    x_row = np.linspace(0, (shape[0]-1)*distance, shape[0])
-    y_row = np.linspace(0, (shape[1]-1)*distance, shape[1])
-    X,Y = np.meshgrid(x_row, y_row)
-    x = np.zeros_like(v)
-    x[:,0], x[:,1] = X.flatten(), Y.flatten()
-
+    order = 1
+    for n,i in enumerate(shape):
+        if n == 0:
+            temp = np.ones(i+1)
+            temp[::2] = -1
+            print(temp)
+        else:
+            temp = np.repeat(temp[np.newaxis], i, axis = n)
+            print(temp)
+    exit()
     return Simulation(x, v, m, q, r)
 
 def rand(N, p = 2, x = (0,100), v = (0,100), m = (1E7,1E5), q = (0,1E-5), r = (1,0.1)):
