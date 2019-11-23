@@ -1,10 +1,15 @@
+"""
+    A particle collides with a 10x10 lattice of particles with alternating
+    charge.
+"""
+
 import sys
 
 sys.path.append("..")
 from particles import lattice, Particle
 
 # Lattice filename
-filename = "collision_lattice"
+filename = "collision_lattice_2D"
 
 # Lattice parameters
 lattice_kwargs = {"shape":(10,10), "mass":1E2, "absolute_charge":1E-6,

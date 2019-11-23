@@ -1,3 +1,9 @@
+"""
+    Models the trajectories of particles that interact with one another
+    through gravitational forces, Coulomb interactions, and collisions.
+"""
+
+
 from matplotlib.animation import FuncAnimation, writers
 import matplotlib.animation as animation
 from matplotlib.patches import Circle
@@ -55,23 +61,41 @@ def lattice(shape, mass, absolute_charge, distance, radius):
     p = shape.ndim
     N = np.prod(shape)
 
-    x0 = np.ones((N,p))
-    v0 = np.zeros((N,p))
-    m = np.ones(N)
-    q = np.ones(N)
-    r = np.ones(N)
-
-    order = 1
-    for n,i in enumerate(shape):
-        if n == 0:
-            temp = np.ones(i+1)
-            temp[::2] = -1
-            print(temp)
+    # Setting lattice positions
+    ctr_dist = 2*radius + distance
+    arrays = []
+    for i in shape:
+        if i == 1:
+            extension = np.array([0])
         else:
-            temp = np.repeat(temp[np.newaxis], i, axis = n)
-            print(temp)
-    exit()
-    return Simulation(x, v, m, q, r)
+            extension = np.arange(0, ctr_dist*i, ctr_dist)
+        arrays.append(extension)
+
+    x0 = np.meshgrid(*arrays)
+    for n,i in enumerate(x0):
+        x0[n] = np.reshape(i, N)
+
+    x0 = np.array(x0).T
+
+    # Setting lattice velocities (zero)
+    v0 = np.zeros_like(x0)
+    # Setting lattice masses
+    m = np.ones(N)*mass
+
+    # Setting lattice charges
+    bool_shape = ((shape + 1) % 2).astype(bool)
+    slices = [slice(i) for i in shape] if shape.ndim > 0 else slice(shape)
+    shape[bool_shape] += 1
+    q = np.ones(np.prod(shape))
+    q[::2] = -1
+    q = q.reshape(shape)
+    q = q[tuple(slices)]*absolute_charge
+    q = q.reshape(N)
+
+    # Setting lattice radii
+    r = np.ones(N)*radius
+
+    return Simulation(x0, v0, m, q, r)
 
 def rand(N, p = 2, x = (0,100), v = (0,100), m = (1E7,1E5), q = (0,1E-5), r = (1,0.1)):
     N = int(N)
@@ -313,7 +337,7 @@ class Simulation:
         # Indices of particles that are colliding with current particle
         idx = (dn <= r2+r1).flatten()
         # Find acceleration by conservation laws for elastic collisions
-        a_c = v2[idx]*(m1-m2[idx])/(m1+m2[idx]) + 2*m2[idx]*v1/(m1+m2[idx])
+        a_c = v1*(m1-m2[idx])/(m1+m2[idx]) + 2*m2[idx]*v2[idx]/(m1+m2[idx])
         # Make the collision acceleration a scalar quantity
         a_c = mod.linalg.norm(a_c, axis = 1)[:,np.newaxis]
         return -cf*mod.sum(a_c*d2[idx]/dn[idx], axis = 0)/dt
@@ -680,7 +704,10 @@ class Simulation:
         # Minimum log of shifted speed
         v_max = np.max(speeds_scaled, axis = 1)[:,np.newaxis]
         # Rescaling the speeds in range 0,1 and subtracting from 1
-        colors_g = 1-((speeds_scaled - v_min)/(v_max-v_min))
+        idx = np.greater(np.abs(v_min - v_max), 1E-10).squeeze()
+        colors_g = np.zeros_like(speeds_scaled)
+        colors_g[idx] = 1-((speeds_scaled[idx] - v_min[idx])/\
+                        (v_max[idx]-v_min[idx]))
 
         # Initializing the circles as a list and appending them to the plot
         spheres = []
@@ -688,8 +715,7 @@ class Simulation:
             # Creating a circle with initial position, radius, and RGB color
             pos = vp.vector(i[0], i[1], i[2])
             rgb = vp.vector(1,k,0)
-            sphere = vp.sphere(pos = pos, radius = 10*j/np.max(self.r),
-                               color = rgb)
+            sphere = vp.sphere(pos = pos, radius = j, color = rgb)
             spheres.append(sphere)
 
         while True:

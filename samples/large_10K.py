@@ -1,3 +1,8 @@
+"""
+    A simulation with 10,000 particles, whose initial conditions are generated
+    randomly according to a Gaussian distribution.
+"""
+
 import sys
 
 sys.path.append("..")
