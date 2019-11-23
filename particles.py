@@ -3,7 +3,6 @@
     through gravitational forces, Coulomb interactions, and collisions.
 """
 
-
 from matplotlib.animation import FuncAnimation, writers
 import matplotlib.animation as animation
 from matplotlib.patches import Circle
