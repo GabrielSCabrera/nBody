@@ -191,7 +191,7 @@ class Simulation:
             –– NOT YET IMPLEMENTED ––––––––––––
                     radii       –   numerical array of shape (N,)
 
-            –– FOR S.I. UNITS –––––––––––––––––
+            –– ASSUMING S.I. UNITS ––––––––––––
                     position    –   meters
                     velocity    –   meters/second
                     mass        –   kilograms
