@@ -2,7 +2,7 @@ import numpy as np
 
 class Sphere:
 
-    def __init__(self, x0, v0, m, q, r):
+    def __init__(self, x0, v0, w0, m, q, r):
         """
         –– INPUT ARGUMENTS ––––––––––––––––––––––––––––––––––––––––––––––––
 
@@ -17,6 +17,7 @@ class Sphere:
         # Initializing Position, Velocity, Mass, and Radius
         self.x0 = np.array(x0).squeeze()
         self.v0 = np.array(v0).squeeze()
+        self.w0 = np.array(w0).squeeze()
         self.m = np.array(m).squeeze()
         self.q = np.array(q).squeeze()
         self.r = np.array(r).squeeze()
