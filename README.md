@@ -1,4 +1,5 @@
 # nBody
+
 ### A GPU-accelerated N-body particle simulator and animator
 
 Create complex particle simulations the easy way: a high-level package for designing and simulating large-scale particle interactions. Let **nBody** do the hard work for you!
