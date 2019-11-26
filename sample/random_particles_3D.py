@@ -9,7 +9,7 @@ from nbody import rand, animate, save
 filename = "random_particles_3D"
 
 # Initializing a System() object via the rand() function
-L = rand(300, x = (0,10) , p = 3, m = (1E9, 1E3))
+L = rand(300, x0 = (0,10), p = 3, m = (1E9, 1E3))
 
 T = 5E-2
 dt = 1E-4
