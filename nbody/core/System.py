@@ -27,6 +27,7 @@ class System:
         self.p = None
         self.x0 = None
         self.v0 = None
+        self.w0 = None
         self.m = None
         self.q = None
         self.r = None
@@ -55,6 +56,7 @@ class System:
             if self.N is None:
                 self.x0 = np.array([sphere.x0])
                 self.v0 = np.array([sphere.v0])
+                self.w0 = np.array([sphere.w0])
                 self.m = np.array([sphere.m])
                 self.q = np.array([sphere.q])
                 self.r = np.array([sphere.r])
@@ -64,9 +66,11 @@ class System:
                 # Updating the number of spheres
                 self.N += 1
 
-                # Updating the initial conditions for position and velocity
+                # Updating the initial conditions for position, velocity, and
+                # angular velocity
                 self.x0 = np.vstack([self.x0, sphere.x0])
                 self.v0 = np.vstack([self.v0, sphere.v0])
+                self.w0 = np.vstack([self.w0, sphere.w0])
 
                 # Including the new sphere's mass, charge, and radius
                 self.m = np.concatenate([self.m, [sphere.m]])
@@ -108,8 +112,9 @@ class System:
                 if collision:
                     a = a + self._a_collision(m1 = 1.1, m2 = c, r1 = 1.1,
                                               r2 = c, v1 = d[0], v2 = d,
-                                              d2 = d, dn = c, cf = 1.1,
-                                              mod = mod, dt = 1.1)
+                                              w1 = d[0], w2 = d, d2 = d,
+                                              dn = c, cf = 1.1, mod = mod,
+                                              dt = 1.1)
                 c = 0.5*(c+1)
             times.append(time() - t0)
         return times[0] < times[1]
@@ -135,7 +140,7 @@ class System:
         a_c = k*q2*q1/m1
         return mod.sum((a_g + a_c)*d2/dn, axis = 0)
 
-    def _a_collision(self, m1, m2, r1, r2, v1, v2, d2, dn, cf, mod, dt):
+    def _a_collision(self, m1, m2, r1, r2, v1, v2, w1, w2, d2, dn, cf, mod, dt):
         """
             Calculates the total acceleration of a sphere due to collisions
             with all the other spheres
@@ -227,6 +232,7 @@ class System:
         # Initializing empty arrays for positions and velocities
         x = mod.zeros((steps, self.N, self.p))
         v = mod.zeros((steps, self.N, self.p))
+        w = mod.zeros((steps, self.N, self.p))
 
         # Loading masses, charges, and radii from attributes
         mass = mod.array(self.m[:,mod.newaxis])
@@ -236,9 +242,11 @@ class System:
         # Inserting initial conditions
         x[0] = mod.array(self.x0)
         v[0] = mod.array(self.v0)
+        w[0] = mod.array(self.w0)
 
         # Allocating memory for temporary variables
         v_half = mod.zeros((self.N, self.p))
+        w_half = mod.zeros((self.N, self.p))
 
         # Universal gravitational constant
         G = 6.67430E-11
@@ -247,7 +255,7 @@ class System:
         # Collision force coefficient
         cf = 0.5
 
-        # Initilize countdown timer
+        # Initialize countdown timer
         if debug:
             counter = Counter(2*steps*self.N)
 
@@ -261,6 +269,8 @@ class System:
                 q2 = self._arr_del(arr = charge, n = n, GPU = GPU, axis = 0)
                 # Velocities of all spheres except the current one
                 v2 = self._arr_del(arr = v[m-1], n = n, GPU = GPU, axis = 0)
+                # Angular velocities of all spheres except the current one
+                w2 = self._arr_del(arr = w[m-1], n = n, GPU = GPU, axis = 0)
                 # Radii of all spheres except the current one
                 r2 = self._arr_del(arr = radius, n = n, GPU = GPU, axis = 0)
                 # Vectors pointing from each sphere, toward the current one
@@ -276,10 +286,12 @@ class System:
                     # Including acceleration from intersphere collisions
                     a = a + self._a_collision(m1 = mass[n], m2 = m2,
                         r1 = radius[n], r2 = r2, v1 = v[m-1,n], v2 = v2,
-                        d2 = d2, dn = dn, cf = cf, mod = mod, dt = dt)
+                        w1 = w[m-1,n], w2 = w2, d2 = d2, dn = dn, cf = cf,
+                        mod = mod, dt = dt)
 
                 # Verlet half-step velocity
                 v_half[n] = v[m-1,n] + dt*0.5*a
+                w_half[n] = w[m-1,n] + dt*0.5*a
                 # Updating new position
                 x[m,n] = x[m-1,n] + dt*v_half[n]
 
@@ -295,6 +307,8 @@ class System:
                 q2 = self._arr_del(arr = charge, n = n, GPU = GPU, axis = 0)
                 # Velocities of all spheres except the current one
                 v2 = self._arr_del(arr = v[m], n = n, GPU = GPU, axis = 0)
+                # Angular velocities of all spheres except the current one
+                w2 = self._arr_del(arr = w[m], n = n, GPU = GPU, axis = 0)
                 # Radii of all spheres except the current one
                 r2 = self._arr_del(arr = radius, n = n, GPU = GPU, axis = 0)
                 # Vectors pointing from each sphere, toward the current one
@@ -310,7 +324,8 @@ class System:
                     # Including acceleration from intersphere collisions
                     a = a + self._a_collision(m1 = mass[n], m2 = m2,
                         r1 = radius[n], r2 = r2, v1 = v[m,n], v2 = v2,
-                        d2 = d2, dn = dn, cf = cf, mod = mod, dt = dt)
+                        w1 = w[m,n], w2 = w2, d2 = d2, dn = dn, cf = cf,
+                        mod = mod, dt = dt)
 
                 # Updating new velocity
                 v[m,n] = v_half[n] + dt*0.5*a
