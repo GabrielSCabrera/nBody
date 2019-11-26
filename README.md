@@ -43,10 +43,10 @@ A possible configuration is as follows:
     m[m < 0] = np.abs(m[m < 0])
     m[m == 0] = 1E-3
 
-Next, pass these arrays in the given order to a ```Simulation``` object, so as to create a new instance ```S```.
+Next, pass these arrays in the given order to the ```spheres``` function, so as to create a new instance ```S``` of class ```System``` with the above conditions.
 
-    from particles import Simulation
-    S = Simulation(x, v, m, q, r)
+    from nbody import *
+    S = spheres(x, v, m, q, r)
 
 After selecting a simulation runtime ```T``` and (optional) time-step ```dt```, use the ```solve``` method to calculate the particles' trajectories.
 
@@ -54,10 +54,10 @@ After selecting a simulation runtime ```T``` and (optional) time-step ```dt```, 
 
 If the system is 2-D such that ```p == 2```, an animation can be created and saved to file; here, the filename ```quick_start``` is chosen, and will produce a file ```animations/quick_start.mp4```.  
 
-    S.animate("quick_start")
+    animate(S, "quick_start")
 
 If the system is 3-D such that ```p == 3```, animations can be created but not saved to file – simply omit the string argument shown above, and no warnings will be raised.
 
-Once the ```solve``` method has been called, it is also possible to save the ```Simulation``` instance to file; in this case, the data will be saved to a directory ```saved/quick_start```.
+Once the ```solve``` method has been called, it is also possible to save the ```System``` instance to file; in this case, the data will be saved to a directory ```saved/quick_start```.
 
-    S.save("quick_start")
+    save(S, "quick_start")

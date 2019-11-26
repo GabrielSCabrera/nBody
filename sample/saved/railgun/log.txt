@@ -1,0 +1,10 @@
+
+SIMULATION INFO:
+
+	Particles		126
+	Dimensions		2
+	T			1
+	dt			0.001
+	Steps			999
+	CUDA			Inactive
+	Collisions		Active
