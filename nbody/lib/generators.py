@@ -1,5 +1,9 @@
+from ..utils.validation import validate_velocities
+from ..utils.validation import validate_positions
+from ..utils.validation import validate_charges
+from ..utils.validation import validate_masses
+from ..utils.validation import validate_radii
 from ..core import System
-
 import numpy as np
 
 def spheres(x0, v0, w0, m, q, r):
@@ -17,19 +21,20 @@ def spheres(x0, v0, w0, m, q, r):
 
                 x0  –   positions   –   (N,p)   –   meters
                 v0  –   velocities  –   (N,p)   –   meters/second
-                w0  –   ang. vel-   –   (N,p)   –   radians/second
+                w0  –   ang. vel.   –   (N,p)   –   radians/second
                 m   –   masses      –   (N,)    –   kilograms
                 q   –   charges     –   (N,)    –   coulombs
                 r   –   radii       –   (N,)    –   meters
 
     """
     S = System()
-    S.x0 = x0
-    S.v0 = v0
-    S.w0 = w0
-    S.m = m
-    S.q = q
-    S.r = r
+    x0 = validate_positions(x0)
+    v0 = validate_velocities(v0)
+    w0 = validate_velocities(w0)
+    m = validate_masses(m)
+    q = validate_charges(q)
+    r = validate_radii(r)
+    S.x0, S.v0, S.w0, S.m, S.q, S.r = x0, v0, w0, m, q, r
     S.N = x0.shape[0]
     S.p = x0.shape[1]
     return S
@@ -77,7 +82,7 @@ def lattice(shape, mass, charge, distance, radius):
 
     return spheres(x0, v0, w0, m, q, r)
 
-def rand(N, p = 2, x0 = (0,100), v0 = (0,100), m = (1E7,1E5), q = (0,1E-5), r = (1,0.1)):
+def rand(N, p = 2, x0 = (0,100), v0 = (0,100), w0 = (0,1), m = (1E7,1E5), q = (0,1E-5), r = (1,0.1)):
     N = int(N)
     x0 = np.random.normal(x0[0], x0[1], (N,p))
     v0 = np.random.normal(v0[0], v0[1], (N,p))

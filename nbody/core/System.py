@@ -3,6 +3,8 @@
     through gravitational forces, Coulomb interactions, and collisions.
 """
 
+from ..utils.exceptions import DimensionError
+from ..utils.validation import validate_time
 from ..utils.Counter import Counter
 from .Sphere import Sphere
 
@@ -46,10 +48,34 @@ class System:
         """
             Adds one or more new Spheres to the system.
 
-            Argument 'spheres' should be a 'Sphere' or array of Spheres
+            Argument 'spheres' should be a 'Sphere' or sequence thereof.
         """
+
+        # Type Checking
         if isinstance(spheres, Sphere):
             spheres = [spheres]
+        elif isinstance(spheres, (list, tuple, np.ndarray)):
+            for n,sphere in enumerate(spheres):
+                if not isinstance(sphere, Sphere):
+                    msg = (f"Element {n:d} of 'spheres' in 'System.add' "
+                           f"is of type {str(type(sphere))}; all elements "
+                           f"in sequence must be 'Sphere' objects.")
+                    raise TypeError(msg)
+        else:
+            msg = (f"Argument 'spheres' in 'System.add' is of type "
+                   f"{str(type(spheres))}; expected a 'Sphere' object, or "
+                   f"list containing compatible 'Sphere' objects.")
+            raise TypeError(msg)
+
+        # Dimension Checking
+        for n,sphere in enumerate(spheres):
+            if n == 0:
+                p = sphere.p
+            else:
+                if sphere.p != p:
+                    msg = ("Inconsistent dimensionality of 'Sphere' instances"
+                           " for argument 'spheres' in 'System.add'.")
+                    raise DimensionError(msg)
 
         for sphere in spheres:
             # If the System is empty, initializes it
@@ -203,6 +229,9 @@ class System:
         # Auto-selecting dt if None
         if dt is None:
             dt = T/500
+        else:
+            dt = validate_time(dt)
+        T = validate_time(T)
 
         # Auto-selecting cupy or numpy depending on system/simulation
         if GPU is None:
@@ -347,6 +376,7 @@ class System:
         self.t = np.linspace(0, T, steps)
         self.x = x
         self.v = v
+        self.w = w
 
 if __name__ == "__main__":
 

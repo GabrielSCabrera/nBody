@@ -10,7 +10,7 @@ import numpy as np
 filename = "collision_lattice_3D"
 
 # Lattice parameters
-lattice_kwargs = {"shape":(5,5,5), "mass":1E3, "absolute_charge":1E-5,
+lattice_kwargs = {"shape":(5,5,5), "mass":1E3, "charge":1E-5,
                   "distance":0, "radius":0.5}
 
 # Initializing a System() object via the lattice() function
@@ -19,8 +19,9 @@ L = lattice(**lattice_kwargs)
 # Creating a new Sphere() object
 x = (-10, -10, -10)
 v = (40, 30, 34)
+w = (0, 0, 0)
 m, q, r = 50, 0, 0.25
-P1 = Sphere(x, v, m, q, r)
+P1 = Sphere(x, v, w, m, q, r)
 
 # Adding the new particle to the System
 L.add(P1)

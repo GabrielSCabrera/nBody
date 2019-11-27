@@ -1,3 +1,8 @@
+from ..utils.validation import validate_position
+from ..utils.validation import validate_velocity
+from ..utils.validation import validate_charge
+from ..utils.validation import validate_radius
+from ..utils.validation import validate_mass
 import numpy as np
 
 class Sphere:
@@ -10,17 +15,22 @@ class Sphere:
 
                 x0  –   positions   –   (N,p)   –   meters
                 v0  –   velocities  –   (N,p)   –   meters/second
+                w0  –   ang. vel.   –   (N,p)   –   radians/second
                 m   –   masses      –   (N,)    –   kilograms
                 q   –   charges     –   (N,)    –   coulombs
                 r   –   radii       –   (N,)    –   meters
         """
-        # Initializing Position, Velocity, Mass, and Radius
-        self.x0 = np.array(x0).squeeze()
-        self.v0 = np.array(v0).squeeze()
-        self.w0 = np.array(w0).squeeze()
-        self.m = np.array(m).squeeze()
-        self.q = np.array(q).squeeze()
-        self.r = np.array(r).squeeze()
+
+        # Checking each argument is programmatically and physically sound
+        self.x0 = validate_position(x0)
+        self.v0 = validate_velocity(v0)
+        self.w0 = validate_velocity(w0)
+        self.m = validate_mass(m)
+        self.q = validate_charge(q)
+        self.r = validate_radius(r)
+
+        # Initializing dimensionality
+        self.p = self.x0.shape[0]
 
 if __name__ == "__main__":
 

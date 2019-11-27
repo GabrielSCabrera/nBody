@@ -5,20 +5,24 @@ import numpy as np
 filename = "railgun"
 
 sign = -1
-N = 50
+N = 40
 y_top = 4
 y_bottom = 2
 radii = 0.5
 masses = 1E6
 charges = 1E-3
 particles = []
-x0 = -100
+x0 = -50
 for i in range(N):
-    particles.append(Sphere((x0+2*i*radii+0.1, y_top), (0,0), masses, sign*charges, radii))
-    particles.append(Sphere((x0+2*i*radii+0.1, y_bottom), (0,0), masses, sign*charges, radii))
+    xA = (x0+2*i*radii+0.1, y_top)
+    A = Sphere(xA, (0,0), (0,0), masses, sign*charges, radii)
+    particles.append(A)
+    xB = (x0+2*i*radii+0.1, y_bottom)
+    B = Sphere(xB, (0,0), (0,0), masses, sign*charges, radii)
+    particles.append(B)
     sign *= -1
 
-P = Sphere([x0-3, (y_top + y_bottom)/2], [0.5,0], 1, 1E-3, 0.3)
+P = Sphere([x0-3, (y_top + y_bottom)/2], [0.5,0], [0,0], 1, 1E-3, 0.3)
 S = lattice((5,5), 10, 0, 0.01, 1)
 
 for i in particles:
