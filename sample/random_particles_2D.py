@@ -1,5 +1,5 @@
 """
-    A 2-D simulation with 300 particles, whose initial conditions are generated
+    A 2-D simulation with 50 particles, whose initial conditions are generated
     randomly according to a Gaussian distribution.
 """
 
@@ -9,7 +9,7 @@ from nbody import rand, animate, save
 filename = "random_particles_2D"
 
 # Initializing a System() object via the rand() function
-L = rand(300, x0 = (0,10), m = (1E9, 1E3))
+L = rand(50, x0 = (0,10), m = (1E9, 1E3))
 
 T = 5E-2
 dt = 1E-4

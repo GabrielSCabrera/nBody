@@ -1,7 +1,3 @@
-"""
-    Models the trajectories of spheres that interact with one another
-    through gravitational forces, Coulomb interactions, and collisions.
-"""
 from ..core import System
 
 import numpy as np
@@ -40,6 +36,7 @@ def save(system, dirname = "nBody_save_"):
     np.save(f"{dirname}/arr/t", system.t)
     np.save(f"{dirname}/arr/x", system.x)
     np.save(f"{dirname}/arr/v", system.v)
+    np.save(f"{dirname}/arr/w", system.w)
     np.save(f"{dirname}/arr/m", system.m)
     np.save(f"{dirname}/arr/q", system.q)
     np.save(f"{dirname}/arr/r", system.r)
@@ -59,12 +56,13 @@ def load(dirname):
     t = np.load(f"{dirname}/arr/t.npy")
     x = np.load(f"{dirname}/arr/x.npy")
     v = np.load(f"{dirname}/arr/v.npy")
+    w = np.load(f"{dirname}/arr/w.npy")
     m = np.load(f"{dirname}/arr/m.npy")
     q = np.load(f"{dirname}/arr/q.npy")
     r = np.load(f"{dirname}/arr/r.npy")
 
-    I = Simulation(x[0], v[0], m, q, r)
-    I.t, I.x, I.v = t, x, v
+    I = Simulation(x[0], v[0], w[0], m, q, r)
+    I.t, I.x, I.v, I.w = t, x, v, w
 
     with open(f"{dirname}/metadata.dat") as infile:
         data = infile.read().split(" ")

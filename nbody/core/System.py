@@ -3,6 +3,8 @@
     through gravitational forces, Coulomb interactions, and collisions.
 """
 
+from ..utils.exceptions import DimensionError
+from ..utils.validation import validate_time
 from ..utils.Counter import Counter
 from .Sphere import Sphere
 
@@ -15,10 +17,6 @@ try:
     cupy_imported = True
 except ImportError:
     cupy_imported = False
-    warning_msg = ("\033[01mWARNING\033[m: Module \033[03mcupy\033[m is not "
-                   "installed on this system. \033[03mcupy\033[m enables GPU "
-                   "based acceleration through multiprocessing.")
-    print(warning_msg)
 
 class System:
 
@@ -27,6 +25,7 @@ class System:
         self.p = None
         self.x0 = None
         self.v0 = None
+        self.w0 = None
         self.m = None
         self.q = None
         self.r = None
@@ -45,33 +44,57 @@ class System:
         """
             Adds one or more new Spheres to the system.
 
-            Argument 'spheres' should be a 'Sphere' or array of Spheres
+            Argument 'spheres' should be a 'Sphere' or sequence thereof.
         """
+
+        # Type Checking
         if isinstance(spheres, Sphere):
             spheres = [spheres]
+        elif isinstance(spheres, (list, tuple, np.ndarray)):
+            for n,sphere in enumerate(spheres):
+                if not isinstance(sphere, Sphere):
+                    msg = (f"Element {n:d} of 'spheres' in 'System.add' "
+                           f"is of type {str(type(sphere))}; all elements "
+                           f"in sequence must be 'Sphere' objects.")
+                    raise TypeError(msg)
+        else:
+            msg = (f"Argument 'spheres' in 'System.add' is of type "
+                   f"{str(type(spheres))}; expected a 'Sphere' object, or "
+                   f"list containing compatible 'Sphere' objects.")
+            raise TypeError(msg)
+
+        # Dimension Checking
+        for n,sphere in enumerate(spheres):
+            if n == 0:
+                p = sphere.p
+            else:
+                if sphere.p != p:
+                    raise DimensionError(p, sphere.p)
 
         for sphere in spheres:
             # If the System is empty, initializes it
             if self.N is None:
-                self.x0 = np.array([sphere.x0])
-                self.v0 = np.array([sphere.v0])
-                self.m = np.array([sphere.m])
-                self.q = np.array([sphere.q])
-                self.r = np.array([sphere.r])
+                self.x0 = np.array(sphere.x0)
+                self.v0 = np.array(sphere.v0)
+                self.w0 = np.array(sphere.w0)
+                self.m = np.array(sphere.m)
+                self.q = np.array(sphere.q)
+                self.r = np.array(sphere.r)
                 self.N = 1
                 self.p = self.x0.shape[1]
             else:
                 # Updating the number of spheres
                 self.N += 1
 
-                # Updating the initial conditions for position and velocity
+                # Updating the initial conditions for position, velocity, and
+                # angular velocity
                 self.x0 = np.vstack([self.x0, sphere.x0])
                 self.v0 = np.vstack([self.v0, sphere.v0])
-
+                self.w0 = np.vstack([self.w0, sphere.w0])
                 # Including the new sphere's mass, charge, and radius
-                self.m = np.concatenate([self.m, [sphere.m]])
-                self.q = np.concatenate([self.q, [sphere.q]])
-                self.r = np.concatenate([self.r, [sphere.r]])
+                self.m = np.vstack([self.m, sphere.m])
+                self.q = np.vstack([self.q, sphere.q])
+                self.r = np.vstack([self.r, sphere.r])
 
         # Resetting the object to its original state, including the new data
         self.attribute_reset()
@@ -108,8 +131,9 @@ class System:
                 if collision:
                     a = a + self._a_collision(m1 = 1.1, m2 = c, r1 = 1.1,
                                               r2 = c, v1 = d[0], v2 = d,
-                                              d2 = d, dn = c, cf = 1.1,
-                                              mod = mod, dt = 1.1)
+                                              w1 = d[0], w2 = d, d2 = d,
+                                              dn = c, cf = 1.1, mod = mod,
+                                              dt = 1.1)
                 c = 0.5*(c+1)
             times.append(time() - t0)
         return times[0] < times[1]
@@ -135,7 +159,7 @@ class System:
         a_c = k*q2*q1/m1
         return mod.sum((a_g + a_c)*d2/dn, axis = 0)
 
-    def _a_collision(self, m1, m2, r1, r2, v1, v2, d2, dn, cf, mod, dt):
+    def _a_collision(self, m1, m2, r1, r2, v1, v2, w1, w2, d2, dn, cf, mod, dt):
         """
             Calculates the total acceleration of a sphere due to collisions
             with all the other spheres
@@ -198,6 +222,9 @@ class System:
         # Auto-selecting dt if None
         if dt is None:
             dt = T/500
+        else:
+            dt = validate_time(dt)
+        T = validate_time(T)
 
         # Auto-selecting cupy or numpy depending on system/simulation
         if GPU is None:
@@ -227,18 +254,21 @@ class System:
         # Initializing empty arrays for positions and velocities
         x = mod.zeros((steps, self.N, self.p))
         v = mod.zeros((steps, self.N, self.p))
+        w = mod.zeros((steps, self.N, self.p))
 
         # Loading masses, charges, and radii from attributes
-        mass = mod.array(self.m[:,mod.newaxis])
-        charge = mod.array(self.q[:,mod.newaxis])
-        radius = mod.array(self.r[:,mod.newaxis])
+        mass = mod.array(self.m)
+        charge = mod.array(self.q)
+        radius = mod.array(self.r)
 
         # Inserting initial conditions
         x[0] = mod.array(self.x0)
         v[0] = mod.array(self.v0)
+        w[0] = mod.array(self.w0)
 
         # Allocating memory for temporary variables
         v_half = mod.zeros((self.N, self.p))
+        w_half = mod.zeros((self.N, self.p))
 
         # Universal gravitational constant
         G = 6.67430E-11
@@ -247,7 +277,7 @@ class System:
         # Collision force coefficient
         cf = 0.5
 
-        # Initilize countdown timer
+        # Initialize countdown timer
         if debug:
             counter = Counter(2*steps*self.N)
 
@@ -261,6 +291,8 @@ class System:
                 q2 = self._arr_del(arr = charge, n = n, GPU = GPU, axis = 0)
                 # Velocities of all spheres except the current one
                 v2 = self._arr_del(arr = v[m-1], n = n, GPU = GPU, axis = 0)
+                # Angular velocities of all spheres except the current one
+                w2 = self._arr_del(arr = w[m-1], n = n, GPU = GPU, axis = 0)
                 # Radii of all spheres except the current one
                 r2 = self._arr_del(arr = radius, n = n, GPU = GPU, axis = 0)
                 # Vectors pointing from each sphere, toward the current one
@@ -276,10 +308,12 @@ class System:
                     # Including acceleration from intersphere collisions
                     a = a + self._a_collision(m1 = mass[n], m2 = m2,
                         r1 = radius[n], r2 = r2, v1 = v[m-1,n], v2 = v2,
-                        d2 = d2, dn = dn, cf = cf, mod = mod, dt = dt)
+                        w1 = w[m-1,n], w2 = w2, d2 = d2, dn = dn, cf = cf,
+                        mod = mod, dt = dt)
 
                 # Verlet half-step velocity
                 v_half[n] = v[m-1,n] + dt*0.5*a
+                w_half[n] = w[m-1,n] + dt*0.5*a
                 # Updating new position
                 x[m,n] = x[m-1,n] + dt*v_half[n]
 
@@ -295,6 +329,8 @@ class System:
                 q2 = self._arr_del(arr = charge, n = n, GPU = GPU, axis = 0)
                 # Velocities of all spheres except the current one
                 v2 = self._arr_del(arr = v[m], n = n, GPU = GPU, axis = 0)
+                # Angular velocities of all spheres except the current one
+                w2 = self._arr_del(arr = w[m], n = n, GPU = GPU, axis = 0)
                 # Radii of all spheres except the current one
                 r2 = self._arr_del(arr = radius, n = n, GPU = GPU, axis = 0)
                 # Vectors pointing from each sphere, toward the current one
@@ -310,7 +346,8 @@ class System:
                     # Including acceleration from intersphere collisions
                     a = a + self._a_collision(m1 = mass[n], m2 = m2,
                         r1 = radius[n], r2 = r2, v1 = v[m,n], v2 = v2,
-                        d2 = d2, dn = dn, cf = cf, mod = mod, dt = dt)
+                        w1 = w[m,n], w2 = w2, d2 = d2, dn = dn, cf = cf,
+                        mod = mod, dt = dt)
 
                 # Updating new velocity
                 v[m,n] = v_half[n] + dt*0.5*a
@@ -332,6 +369,7 @@ class System:
         self.t = np.linspace(0, T, steps)
         self.x = x
         self.v = v
+        self.w = w
 
 if __name__ == "__main__":
 

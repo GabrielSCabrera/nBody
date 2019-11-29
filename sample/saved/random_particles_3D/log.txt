@@ -1,7 +1,7 @@
 
 SIMULATION INFO:
 
-	Particles		300
+	Particles		100
 	Dimensions		3
 	T			0.05
 	dt			0.0001

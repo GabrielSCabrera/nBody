@@ -1,5 +1,5 @@
 """
-    A 2-D simulation with 300 particles, whose initial conditions are generated
+    A 2-D simulation with 100 particles, whose initial conditions are generated
     randomly according to a Gaussian distribution; velocity is always
     tangential to each particle's position relative to the origin.
 
@@ -12,10 +12,11 @@ import numpy as np
 # Filename for saving results
 filename = "orbits"
 
-N = 500
+N = 100
 
 x = (0,80)
 v = (0.6,0.5)
+w = (0,0)
 m = (5,50)
 q = (0,0)
 r = (1,0.5)
@@ -36,30 +37,34 @@ v_abs = np.random.normal(v[0], v[1], N)[:,None]
 v_unit = x @ np.array([[0, -1],[1, 0]])
 v = v_abs * v_unit
 
+# Setting up the particle angular velocities
+w = np.random.normal(w[0], w[1], (N,1))
+
 # Creating mass array, and accounting for negative values
-m = np.random.normal(m[0], m[1], N)
+m = np.random.normal(m[0], m[1], (N,1))
 m[m < 0] = np.abs(m[m < 0])
 m[m == 0] = 1
 
 # Creating charge array
-q = np.random.normal(q[0], q[1], N)
+q = np.random.normal(q[0], q[1], (N,1))
 
 # Creating radius array, and accounting for negative values
-r = np.random.normal(r[0], r[1], N)
+r = np.random.normal(r[0], r[1], (N,1))
 r[r < 0] = np.abs(r[r < 0])
 r[r == 0] = 1
 
 # Creating a new Sphere() object
 x2 = (0, 0)
 v2 = (0, 0)
+w2 = 0
 m2, q2, r2 = 1E11, 0, 10
-P1 = Sphere(x2, v2, m2, q2, r2)
+P1 = Sphere(x2, v2, w2, m2, q2, r2)
 
 T = 50
 dt = 0.1
 
 # Creating an instance of class System
-S = spheres(x, v, m, q, r)
+S = spheres(x, v, w, m, q, r)
 
 # Adding the new particle to the System
 S.add(P1)

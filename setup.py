@@ -2,8 +2,8 @@
 
 import setuptools
 
-dependencies = ['numpy', 'matplotlib', 'ffmpeg']
-packages = ['nbody', 'nbody.core', 'nbody.lib', 'nbody.utils']
+dependencies = ['numpy', 'matplotlib', 'ffmpeg', 'vpython']
+packages = ['nbody', 'nbody.core', 'nbody.lib', 'nbody.utils', 'nbody.config']
 
 with open('README.md') as f:
     README = f.read()
@@ -14,11 +14,11 @@ setuptools.setup(
     name = 'nbody',
     license = 'GPLv3',
     description = 'GPU-accelerated N-Body particle simulator with visualizer',
-    version = 'v0.0.3',
+    version = 'v0.0.4',
     long_description = README,
     url = 'https://github.com/GabrielSCabrera/nBody',
     packages = packages,
-    python_requires = '>=3.6',
+    python_requires = '>=3.6.8',
     install_requires = dependencies,
     classifiers = [
         # Trove classifiers

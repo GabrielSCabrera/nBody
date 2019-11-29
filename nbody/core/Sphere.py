@@ -1,8 +1,14 @@
+from ..utils.validation import validate_position
+from ..utils.validation import validate_velocity
+from ..utils.validation import validate_charge
+from ..utils.validation import validate_radius
+from ..utils.validation import validate_mass
+from ..utils.validation import init_parser
 import numpy as np
 
 class Sphere:
 
-    def __init__(self, x0, v0, m, q, r):
+    def __init__(self, *args, **kwargs):
         """
         –– INPUT ARGUMENTS ––––––––––––––––––––––––––––––––––––––––––––––––
 
@@ -10,16 +16,24 @@ class Sphere:
 
                 x0  –   positions   –   (N,p)   –   meters
                 v0  –   velocities  –   (N,p)   –   meters/second
+                w0  –   ang. vel.   –   (N,p)   –   radians/second
                 m   –   masses      –   (N,)    –   kilograms
                 q   –   charges     –   (N,)    –   coulombs
                 r   –   radii       –   (N,)    –   meters
         """
-        # Initializing Position, Velocity, Mass, and Radius
-        self.x0 = np.array(x0).squeeze()
-        self.v0 = np.array(v0).squeeze()
-        self.m = np.array(m).squeeze()
-        self.q = np.array(q).squeeze()
-        self.r = np.array(r).squeeze()
+
+        # Checking each argument is programmatically and physically sound
+        parsed_args = init_parser(*args, **kwargs)
+
+        self.x0 = parsed_args["x0"]
+        self.v0 = parsed_args["v0"]
+        self.w0 = parsed_args["w0"]
+        self.m = parsed_args["m"]
+        self.q = parsed_args["q"]
+        self.r = parsed_args["r"]
+
+        # Initializing dimensionality
+        self.p = self.x0.shape[0]
 
 if __name__ == "__main__":
 
