@@ -28,13 +28,19 @@ The package can be installed with the *python package installer*:
 
 Using ```numpy``` arrays, you will need:
 
-* An initial position array ```x``` with shape ```(N,p)```
+* An initial position array ```x0``` with shape ```(N,p)```
     * *N* is the number of *particles*
     * *p* is the number of *dimensions*
-* An initial velocity array ```v``` with shape ```(N,p)```
-* An array of masses ```m```with shape ```(N,)```
-* An array of charges ```q``` with shape ```(N,)```
-* An array of radii ```r``` with shape ```(N,)```
+    
+All other arguments are optional:
+
+* An initial velocity array ```v0``` with shape ```(N,p)```
+* An initial angular velocity array ```w0``` (supported for 2-D and 3-D systems *only*)
+    * In 2-D, with shape ```(N,1)``` 
+    * In 3-D, with shape ```(N,3)```
+* An array of masses ```m```with shape ```(N,1)```
+* An array of charges ```q``` with shape ```(N,1)```
+* An array of radii ```r``` with shape ```(N,1)```
 
 A possible configuration is as follows:
 
