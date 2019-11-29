@@ -27,14 +27,33 @@ def check_type_return_list(obj, obj_type):
 
 def check_ndim_return_array(a, ndim):
     """
-        Checks that the given sequence 'a' is of the given dimension. Returns
-        the array, if successful.
+        Checks that the given sequence 'a' is of the given dimension(s).
+        Returns the array, if successful.
     """
     a = np.array(a)
-    if a.ndim != ndim:
-        msg = (f"The given sequence is {a.ndim:d}-D; a {ndim:d}-D sequence "
+    if not isinstance(ndim, (list, tuple, np.ndarray)):
+        seq = f"{ndim:d}-D"
+        ndim = [ndim]
+    else:
+        seq = []
+        for n in ndim:
+            seq.append(f"{n:d}-D")
+        if len(seq) == 1:
+            seq = seq[0]
+        elif len(seq) == 2:
+            seq = f"{seq[0]} or {seq[1]}"
+        elif len(seq) > 2:
+            seq = ", ".join(seq[:-1]) + f", or {seq[-1]}"
+        else:
+            msg = "Argument 'ndim' cannot be an empty sequence"
+            raise ValueError(msg)
+
+    a_ndim = a.ndim if a.shape != (0,) else 0
+    if a.ndim not in ndim:
+        msg = (f"The given sequence is {a.ndim:d}-D; a {seq} sequence "
                f"is required.")
         raise ShapeError(msg)
+
     return a
 
 def check_numerical_return_array(a):

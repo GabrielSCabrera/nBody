@@ -3,11 +3,12 @@ from ..utils.validation import validate_velocity
 from ..utils.validation import validate_charge
 from ..utils.validation import validate_radius
 from ..utils.validation import validate_mass
+from ..utils.validation import init_parser
 import numpy as np
 
 class Sphere:
 
-    def __init__(self, x0, v0, w0, m, q, r):
+    def __init__(self, *args, **kwargs):
         """
         –– INPUT ARGUMENTS ––––––––––––––––––––––––––––––––––––––––––––––––
 
@@ -22,12 +23,14 @@ class Sphere:
         """
 
         # Checking each argument is programmatically and physically sound
-        self.x0 = validate_position(x0)
-        self.v0 = validate_velocity(v0)
-        self.w0 = validate_velocity(w0)
-        self.m = validate_mass(m)
-        self.q = validate_charge(q)
-        self.r = validate_radius(r)
+        parsed_args = init_parser(*args, **kwargs)
+
+        self.x0 = parsed_args["x0"]
+        self.v0 = parsed_args["v0"]
+        self.w0 = parsed_args["w0"]
+        self.m = parsed_args["m"]
+        self.q = parsed_args["q"]
+        self.r = parsed_args["r"]
 
         # Initializing dimensionality
         self.p = self.x0.shape[0]

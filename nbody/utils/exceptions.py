@@ -21,3 +21,17 @@ class ShapeError(Exception):
     """
     def __init__(self, message):
         super(ShapeError, self).__init__(message)
+
+class PositionError(Exception):
+    """
+        Raised when a Sphere is initialized without an initial position.
+    """
+    def __init__(self, message):
+        super(PositionError, self).__init__(message)
+
+class ArgumentError(Exception):
+    """
+        Raised when an argument is passed both as an *arg and **kwarg
+    """
+    def __init__(self, message):
+        super(ArgumentError, self).__init__(message)

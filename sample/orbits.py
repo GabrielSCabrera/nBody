@@ -38,25 +38,25 @@ v_unit = x @ np.array([[0, -1],[1, 0]])
 v = v_abs * v_unit
 
 # Setting up the particle angular velocities
-w = np.random.normal(w[0], w[1], (N,p))
+w = np.random.normal(w[0], w[1], (N,1))
 
 # Creating mass array, and accounting for negative values
-m = np.random.normal(m[0], m[1], N)
+m = np.random.normal(m[0], m[1], (N,1))
 m[m < 0] = np.abs(m[m < 0])
 m[m == 0] = 1
 
 # Creating charge array
-q = np.random.normal(q[0], q[1], N)
+q = np.random.normal(q[0], q[1], (N,1))
 
 # Creating radius array, and accounting for negative values
-r = np.random.normal(r[0], r[1], N)
+r = np.random.normal(r[0], r[1], (N,1))
 r[r < 0] = np.abs(r[r < 0])
 r[r == 0] = 1
 
 # Creating a new Sphere() object
 x2 = (0, 0)
 v2 = (0, 0)
-w2 = (0, 0)
+w2 = 0
 m2, q2, r2 = 1E11, 0, 10
 P1 = Sphere(x2, v2, w2, m2, q2, r2)
 

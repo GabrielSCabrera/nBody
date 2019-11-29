@@ -69,19 +69,17 @@ class System:
                 p = sphere.p
             else:
                 if sphere.p != p:
-                    msg = ("Inconsistent dimensionality of 'Sphere' instances"
-                           " for argument 'spheres' in 'System.add'.")
-                    raise DimensionError(msg)
+                    raise DimensionError(p, sphere.p)
 
         for sphere in spheres:
             # If the System is empty, initializes it
             if self.N is None:
-                self.x0 = np.array([sphere.x0])
-                self.v0 = np.array([sphere.v0])
-                self.w0 = np.array([sphere.w0])
-                self.m = np.array([sphere.m])
-                self.q = np.array([sphere.q])
-                self.r = np.array([sphere.r])
+                self.x0 = np.array(sphere.x0)
+                self.v0 = np.array(sphere.v0)
+                self.w0 = np.array(sphere.w0)
+                self.m = np.array(sphere.m)
+                self.q = np.array(sphere.q)
+                self.r = np.array(sphere.r)
                 self.N = 1
                 self.p = self.x0.shape[1]
             else:
@@ -93,11 +91,10 @@ class System:
                 self.x0 = np.vstack([self.x0, sphere.x0])
                 self.v0 = np.vstack([self.v0, sphere.v0])
                 self.w0 = np.vstack([self.w0, sphere.w0])
-
                 # Including the new sphere's mass, charge, and radius
-                self.m = np.concatenate([self.m, [sphere.m]])
-                self.q = np.concatenate([self.q, [sphere.q]])
-                self.r = np.concatenate([self.r, [sphere.r]])
+                self.m = np.vstack([self.m, sphere.m])
+                self.q = np.vstack([self.q, sphere.q])
+                self.r = np.vstack([self.r, sphere.r])
 
         # Resetting the object to its original state, including the new data
         self.attribute_reset()
@@ -260,9 +257,9 @@ class System:
         w = mod.zeros((steps, self.N, self.p))
 
         # Loading masses, charges, and radii from attributes
-        mass = mod.array(self.m[:,mod.newaxis])
-        charge = mod.array(self.q[:,mod.newaxis])
-        radius = mod.array(self.r[:,mod.newaxis])
+        mass = mod.array(self.m)
+        charge = mod.array(self.q)
+        radius = mod.array(self.r)
 
         # Inserting initial conditions
         x[0] = mod.array(self.x0)

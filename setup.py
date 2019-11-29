@@ -3,6 +3,7 @@
 import setuptools
 
 dependencies = ['numpy', 'matplotlib', 'ffmpeg', 'vpython']
+packages = ['nbody', 'nbody.core', 'nbody.lib', 'nbody.utils', 'nbody.config']
 
 with open('README.md') as f:
     README = f.read()
@@ -16,7 +17,7 @@ setuptools.setup(
     version = 'v0.0.4',
     long_description = README,
     url = 'https://github.com/GabrielSCabrera/nBody',
-    packages = setuptools.find_namespace_packages(),
+    packages = packages,
     python_requires = '>=3.6.8',
     install_requires = dependencies,
     classifiers = [
