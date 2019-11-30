@@ -40,11 +40,12 @@ def save(system, dirname = "nBody_save_"):
     np.save(f"{dirname}/arr/m", system.m)
     np.save(f"{dirname}/arr/q", system.q)
     np.save(f"{dirname}/arr/r", system.r)
+    np.save(f"{dirname}/arr/bounds", system.bounds)
 
     # Saving metadata, such as time steps, simulation runtime, etc...
     with open(f"{dirname}/metadata.dat", "w+") as outfile:
         msg = (f"dt={system.dt} T={system.T} GPU={system.GPU_active} "
-               f"col={system.collision}")
+               f"col={system.collision} bounds={system.bounds is not None}")
         outfile.write(msg)
 
     # Creates a human-readable log with info on simulation parameters
@@ -60,9 +61,10 @@ def load(dirname):
     m = np.load(f"{dirname}/arr/m.npy")
     q = np.load(f"{dirname}/arr/q.npy")
     r = np.load(f"{dirname}/arr/r.npy")
+    bounds = np.load(f"{dirname}/arr/bounds.npy")
 
     I = Simulation(x[0], v[0], w[0], m, q, r)
-    I.t, I.x, I.v, I.w = t, x, v, w
+    I.t, I.x, I.v, I.w, I.bounds = t, x, v, w, bounds
 
     with open(f"{dirname}/metadata.dat") as infile:
         data = infile.read().split(" ")

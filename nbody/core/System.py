@@ -232,10 +232,16 @@ class System:
         else:
             col = "Inactive"
 
+        if self.bounds.size != 0:
+            bounds = "Active"
+        else:
+            bounds = "Inactive"
+
         msg = (f"\nSIMULATION INFO:\n\n\tParticles\t\t{self.N:d}\n\t"
                    f"Dimensions\t\t{self.p:d}\n\tT\t\t\t{self.T:g}\n\tdt\t\t\t"
                    f"{self.dt:g}\n\tSteps\t\t\t{self.T//self.dt:g}\n\tCUDA"
-                   f"\t\t\t{GPU}\n\tCollisions\t\t{col}")
+                   f"\t\t\t{GPU}\n\tCollisions\t\t{col}\n\tBounds\t\t\t"
+                   f"{bounds}")
         return msg
 
     def solve(self, T, dt = None, GPU = None, debug = True, bounds = None, collision = True):
@@ -266,6 +272,8 @@ class System:
                 msg = (f"Must extend bounding boxes so that the entire system "
                        f"is contained within its boundaries.")
                 raise PhysicsError(msg)
+        else:
+            bounds = np.array([[]])
         self.bounds = bounds
 
         # Auto-selecting cupy or numpy depending on system/simulation
@@ -400,7 +408,7 @@ class System:
                     counter()
 
             # Reversing velocities at boundaries
-            if self.bounds is not None:
+            if self.bounds.size != 0:
                 v[m] = self._bounds(x[m], v[m], radius, mod)
 
         # Display total time elapsed

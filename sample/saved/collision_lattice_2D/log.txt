@@ -8,3 +8,4 @@ SIMULATION INFO:
 	Steps			499
 	CUDA			Inactive
 	Collisions		Active
+	Bounds			Inactive

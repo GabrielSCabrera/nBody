@@ -31,4 +31,4 @@ S.add(P)
 
 S.solve(0.5, 1E-3)
 save(S, filename)
-animate(S)#, filename)
+animate(S, filename)

@@ -21,4 +21,4 @@ L.solve(T, dt, collision = True, bounds = [[-50,50],[-50,50]])
 save(L, filename)
 
 # Saving an animation of the system
-animate(L)#, filename)
+animate(L, filename)
