@@ -22,8 +22,8 @@ for i in range(N):
     particles.append(B)
     sign *= -1
 
-P = Sphere([x0-3, (y_top + y_bottom)/2], [0.5,0], [0], 1, 1E-3, 0.3)
-S = lattice((5,5), 10, 0, 0.01, 1)
+P = Sphere([x0-3, (y_top + y_bottom)/2], [100,0], [0], 5, 1E-3, 0.3)
+S = lattice((5,8), 1, 0, 0, 0.66)
 
 for i in particles:
     S.add(i)
@@ -31,4 +31,4 @@ S.add(P)
 
 S.solve(0.5, 1E-3)
 save(S, filename)
-animate(S, filename)
+animate(S)#, filename)

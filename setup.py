@@ -14,7 +14,7 @@ setuptools.setup(
     name = 'nbody',
     license = 'GPLv3',
     description = 'GPU-accelerated N-Body particle simulator with visualizer',
-    version = 'v0.0.4',
+    version = 'v0.0.5',
     long_description = README,
     url = 'https://github.com/GabrielSCabrera/nBody',
     packages = packages,

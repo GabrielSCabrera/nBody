@@ -35,3 +35,10 @@ class ArgumentError(Exception):
     """
     def __init__(self, message):
         super(ArgumentError, self).__init__(message)
+
+class PhysicsError(Exception):
+    """
+        Raised when an unphysical situation is created
+    """
+    def __init__(self, message):
+        super(PhysicsError, self).__init__(message)

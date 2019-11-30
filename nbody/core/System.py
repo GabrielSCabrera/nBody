@@ -3,8 +3,12 @@
     through gravitational forces, Coulomb interactions, and collisions.
 """
 
+from ..utils.checking import check_numerical_return_array
+from ..utils.checking import check_ndim_return_array
 from ..utils.exceptions import DimensionError
 from ..utils.validation import validate_time
+from ..utils.exceptions import PhysicsError
+from ..utils.exceptions import ShapeError
 from ..utils.Counter import Counter
 from .Sphere import Sphere
 
@@ -178,12 +182,28 @@ class System:
             dt  – integration time-step
         """
         # Indices of spheres that are colliding with current sphere
-        idx = (dn <= r2+r1).flatten()
+        idx1 = (dn <= r2+r1).flatten()
+        # Indices of spheres who are moving toward current sphere
+        idx2 = np.less(np.sum(d2*(v2-v1), axis = 1),0)
+        # Combining boolean arrays
+        idx = np.logical_and(idx1, idx2)
         # Find acceleration by conservation laws for elastic collisions
-        a_c = v1*(m1-m2[idx])/(m1+m2[idx]) + 2*m2[idx]*v2[idx]/(m1+m2[idx])
-        # Make the collision acceleration a scalar quantity
-        a_c = mod.linalg.norm(a_c, axis = 1)[:,np.newaxis]
-        return -cf*mod.sum(a_c*d2[idx]/dn[idx], axis = 0)/dt
+        dv = 2*m2[idx]/(m1+m2[idx])*d2[idx]/dn[idx]**2
+        dv *= np.sum(d2[idx]*(v2[idx]-v1), axis = 1)[:,np.newaxis]
+        return np.sum(dv, axis = 0)/dt
+
+    def _bounds(self, x, v, r, mod):
+        """
+            Bounding box that surrounds the system at limits denoted in
+            attribute 'self.bounds'
+        """
+        low = mod.less_equal(x - self.bounds[:,0] - r, 0)
+        high = mod.less_equal(self.bounds[:,1] - x + r, 0)
+        low = mod.logical_and(low, mod.less(v, 0))
+        high = mod.logical_and(high, mod.greater(v, 0))
+        flip = mod.logical_or(low, high)
+        v[flip] = -v[flip]
+        return v
 
     def _arr_del(self, arr, n, GPU, axis):
         """
@@ -218,13 +238,35 @@ class System:
                    f"\t\t\t{GPU}\n\tCollisions\t\t{col}")
         return msg
 
-    def solve(self, T, dt = None, collision = True, GPU = None, debug = True):
+    def solve(self, T, dt = None, GPU = None, debug = True, bounds = None, collision = True):
         # Auto-selecting dt if None
         if dt is None:
             dt = T/500
         else:
             dt = validate_time(dt)
         T = validate_time(T)
+
+        # Confirming that 'bounds' is a numerical array of shape (p,2)
+        if bounds is not None:
+            bounds = check_numerical_return_array(bounds)
+            condition1 = not np.array_equal(bounds.shape, (self.p, 2))
+            condition2 = np.all(np.greater(bounds[:,0], bounds[:,1]))
+            if condition1 or condition2:
+                msg = (f"Argument 'bounds' must be None or shape (p,2) with "
+                       f"the first axis representing a dimension, and the "
+                       f"second representing the lower and upper bounds of "
+                       f"the box, respectively, in that dimension.")
+                raise ShapeError(msg)
+
+            # Checking that the boundaries contain the entire system
+            low = self.x0 - bounds[:,0] - self.r
+            high = bounds[:,1] - self.x0 + self.r
+            out = np.logical_or(np.less_equal(low, 0), np.less_equal(high, 0))
+            if np.any(out == True):
+                msg = (f"Must extend bounding boxes so that the entire system "
+                       f"is contained within its boundaries.")
+                raise PhysicsError(msg)
+        self.bounds = bounds
 
         # Auto-selecting cupy or numpy depending on system/simulation
         if GPU is None:
@@ -275,7 +317,7 @@ class System:
         # Electrostatic constant
         k = 8.9875517887E9
         # Collision force coefficient
-        cf = 0.5
+        cf = 1
 
         # Initialize countdown timer
         if debug:
@@ -297,14 +339,14 @@ class System:
                 r2 = self._arr_del(arr = radius, n = n, GPU = GPU, axis = 0)
                 # Vectors pointing from each sphere, toward the current one
                 d2 = self._arr_del(arr = x[m-1], n = n, GPU = GPU, axis = 0)\
-                     - x[m-1,n]
+                                   - x[m-1,n]
                 # Distances between current sphere, and all others
                 dn = mod.linalg.norm(d2, axis = 1)[:,np.newaxis]
                 # Sum over total gravitational and Coulomb accelerations
                 a = self._a_inv_square(m1 = mass[n], m2 = m2, d2 = d2, dn = dn,
                                        q1 = charge[n], q2 = q2, G = G, k = k,
                                        mod = mod)
-                if collision:
+                if self.collision:
                     # Including acceleration from intersphere collisions
                     a = a + self._a_collision(m1 = mass[n], m2 = m2,
                         r1 = radius[n], r2 = r2, v1 = v[m-1,n], v2 = v2,
@@ -313,13 +355,14 @@ class System:
 
                 # Verlet half-step velocity
                 v_half[n] = v[m-1,n] + dt*0.5*a
-                w_half[n] = w[m-1,n] + dt*0.5*a
-                # Updating new position
-                x[m,n] = x[m-1,n] + dt*v_half[n]
+                # w_half[n] = w[m-1,n] + dt*0.5*a
 
                 # Display countdown timer
                 if debug:
                     counter()
+
+            # Updating new position
+            x[m] = x[m-1] + dt*v_half
 
             # Loop over each sphere
             for n in range(0, self.N):
@@ -328,14 +371,14 @@ class System:
                 # Charges of all spheres except the current one
                 q2 = self._arr_del(arr = charge, n = n, GPU = GPU, axis = 0)
                 # Velocities of all spheres except the current one
-                v2 = self._arr_del(arr = v[m], n = n, GPU = GPU, axis = 0)
+                v2 = self._arr_del(arr = v_half, n = n, GPU = GPU, axis = 0)
                 # Angular velocities of all spheres except the current one
                 w2 = self._arr_del(arr = w[m], n = n, GPU = GPU, axis = 0)
                 # Radii of all spheres except the current one
                 r2 = self._arr_del(arr = radius, n = n, GPU = GPU, axis = 0)
                 # Vectors pointing from each sphere, toward the current one
-                d2 = self._arr_del(arr = x[m] - x[m,n], n = n, GPU = GPU,
-                                   axis = 0)
+                d2 = self._arr_del(arr = x[m], n = n, GPU = GPU, axis = 0)\
+                                   - x[m,n]
                 # Distances between current sphere, and all others
                 dn = mod.linalg.norm(d2, axis = 1)[:,np.newaxis]
                 # Sum over total gravitational and Coulomb accelerations
@@ -345,7 +388,7 @@ class System:
                 if collision:
                     # Including acceleration from intersphere collisions
                     a = a + self._a_collision(m1 = mass[n], m2 = m2,
-                        r1 = radius[n], r2 = r2, v1 = v[m,n], v2 = v2,
+                        r1 = radius[n], r2 = r2, v1 = v_half[n], v2 = v2,
                         w1 = w[m,n], w2 = w2, d2 = d2, dn = dn, cf = cf,
                         mod = mod, dt = dt)
 
@@ -355,6 +398,10 @@ class System:
                 # Display countdown timer
                 if debug:
                     counter()
+
+            # Reversing velocities at boundaries
+            if self.bounds is not None:
+                v[m] = self._bounds(x[m], v[m], radius, mod)
 
         # Display total time elapsed
         if debug:
