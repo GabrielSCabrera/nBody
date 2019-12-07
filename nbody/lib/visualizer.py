@@ -182,6 +182,22 @@ def _animate_3D(system, savename = None):
     if not vpython_imported:
         raise ImportError("Package 'vpython' required for 3-D animation")
 
+    # Creating a vpython 'canvas' instance
+    scene = vp.canvas()
+
+    # If there are boundaries in the simulation, scales to bounds
+    if system.bounds != np.array([[]]):
+        diffs = np.diff(system.bounds).flatten()
+        centers = (diffs/2) + system.bounds[:,0]
+        centers = vp.vector(centers[0], centers[2], centers[1])
+        scene.center = centers
+        scene.range = np.max(diffs)/1.5
+        scene.autoscale = False
+        # Making box
+        box = vp.box(pos = centers, length = diffs[0], width = diffs[1],
+                     height = diffs[2])
+        box.opacity = 0.1
+
     # Checks if the current simulation is 2-D, raises an error otherwise
     if system.p != 3:
         raise NotImplemented("Can only perform 3-D animation")
@@ -208,17 +224,18 @@ def _animate_3D(system, savename = None):
     spheres = []
     for i,j,k in zip(system.x[0], system.r, colors_g[0]):
         # Creating a circle with initial position, radius, and RGB color
-        pos = vp.vector(i[0], i[1], i[2])
+        pos = vp.vector(i[0], i[2], i[1])
         rgb = vp.vector(1,k,0)
         sphere = vp.sphere(pos = pos, radius = j, color = rgb)
         spheres.append(sphere)
 
     while True:
         for m in range(system.x.shape[0]):
-            vp.rate(32)
+            vp.rate(150)
+            # vp.rate(32)
             # Iterating through each sphere, for a single step with index m
             for n,s in enumerate(spheres):
                 # Moving all circles to their new centers
-                s.pos = vp.vector(system.x[m,n,0],system.x[m,n,1],system.x[m,n,2])
+                s.pos = vp.vector(system.x[m,n,0],system.x[m,n,2],system.x[m,n,1])
                 # Adjusting the green setting depending on current speed
                 s.color = vp.vector(1 - colors_g[m,n], 0, colors_g[m,n])

@@ -46,7 +46,7 @@ def spheres(*args, **kwargs):
 
     return S
 
-def lattice(shape, mass, charge, distance, radius):
+def lattice(shape, mass, charge, distance, radius, flip = True):
     shape = np.array(shape)
     p = shape.ndim
     N = np.prod(shape)
@@ -75,7 +75,8 @@ def lattice(shape, mass, charge, distance, radius):
     slices = [slice(i) for i in shape] if shape.ndim > 0 else slice(shape)
     shape[bool_shape] += 1
     q = np.ones(np.prod(shape))
-    q[::2] = -1
+    if flip:
+        q[::2] = -1
     q = q.reshape(shape)
     q = q[tuple(slices)]*charge
     q = q.reshape((N,1))

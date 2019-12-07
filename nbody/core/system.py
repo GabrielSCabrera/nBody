@@ -10,7 +10,8 @@ from ..utils.validation import validate_time
 from ..utils.exceptions import PhysicsError
 from ..utils.exceptions import ShapeError
 from ..utils.Counter import Counter
-from .Sphere import Sphere
+from .sphere import Sphere
+from .field import Field
 
 from time import time
 import numpy as np
@@ -33,6 +34,8 @@ class System:
         self.m = None
         self.q = None
         self.r = None
+        self.field = None
+        self.bounds = None
         self.attribute_reset()
 
     def attribute_reset(self):
@@ -103,6 +106,16 @@ class System:
         # Resetting the object to its original state, including the new data
         self.attribute_reset()
 
+    def set_field(self, field):
+        """
+            Adds a field to the system, which exerts a force on a particle
+        """
+        if not isinstance(field, Field):
+            msg = (f"Argument 'field' in 'System.set_field' must be an "
+                   f"instance of class 'Field'")
+            raise TypeError(msg)
+        self.field = field
+
     def _test_GPU(self, collision):
         """
             Runs several iterations of an algorithm similar to the one used in
@@ -136,8 +149,7 @@ class System:
                     a = a + self._a_collision(m1 = 1.1, m2 = c, r1 = 1.1,
                                               r2 = c, v1 = d[0], v2 = d,
                                               w1 = d[0], w2 = d, d2 = d,
-                                              dn = c, cf = 1.1, mod = mod,
-                                              dt = 1.1)
+                                              dn = c, mod = mod, dt = 1.1)
                 c = 0.5*(c+1)
             times.append(time() - t0)
         return times[0] < times[1]
@@ -163,7 +175,7 @@ class System:
         a_c = k*q2*q1/m1
         return mod.sum((a_g + a_c)*d2/dn, axis = 0)
 
-    def _a_collision(self, m1, m2, r1, r2, v1, v2, w1, w2, d2, dn, cf, mod, dt):
+    def _a_collision(self, m1, m2, r1, r2, v1, v2, w1, w2, d2, dn, mod, dt):
         """
             Calculates the total acceleration of a sphere due to collisions
             with all the other spheres
@@ -177,14 +189,13 @@ class System:
             d2  – vectors pointing from all spheres, toward the current one
             dn  – distances between all spheres and current sphere
 
-            cf  – force coefficient for collision
             mod – cupy if the GPU is active, numpy otherwise
             dt  – integration time-step
         """
         # Indices of spheres that are colliding with current sphere
         idx1 = (dn <= r2+r1).flatten()
         # Indices of spheres who are moving toward current sphere
-        idx2 = np.less(np.sum(d2*(v2-v1), axis = 1),0)
+        idx2 = np.less(np.sum(d2*(v2-v1), axis = 1), 0)
         # Combining boolean arrays
         idx = np.logical_and(idx1, idx2)
         # Find acceleration by conservation laws for elastic collisions
@@ -192,17 +203,18 @@ class System:
         dv *= np.sum(d2[idx]*(v2[idx]-v1), axis = 1)[:,np.newaxis]
         return np.sum(dv, axis = 0)/dt
 
-    def _bounds(self, x, v, r, mod):
+    def _bounds(self, x, v, r, mod, C_d):
         """
             Bounding box that surrounds the system at limits denoted in
             attribute 'self.bounds'
         """
-        low = mod.less_equal(x - self.bounds[:,0] - r, 0)
-        high = mod.less_equal(self.bounds[:,1] - x + r, 0)
-        low = mod.logical_and(low, mod.less(v, 0))
-        high = mod.logical_and(high, mod.greater(v, 0))
+        tol = 0
+        low = mod.less_equal(x - r, self.bounds[:,0])
+        high = mod.greater_equal(x + r, self.bounds[:,1])
+        low = mod.logical_and(low, mod.less(v, -tol))
+        high = mod.logical_and(high, mod.greater(v, tol))
         flip = mod.logical_or(low, high)
-        v[flip] = -v[flip]
+        v[flip] = -v[flip]*C_d
         return v
 
     def _arr_del(self, arr, n, GPU, axis):
@@ -244,7 +256,8 @@ class System:
                    f"{bounds}")
         return msg
 
-    def solve(self, T, dt = None, GPU = None, debug = True, bounds = None, collision = True):
+    def solve(self, T, dt = None, GPU = None, debug = True, bounds = None,
+    collision = True, C_d = 0.9):
         # Auto-selecting dt if None
         if dt is None:
             dt = T/500
@@ -319,13 +332,14 @@ class System:
         # Allocating memory for temporary variables
         v_half = mod.zeros((self.N, self.p))
         w_half = mod.zeros((self.N, self.p))
+        a_step = mod.zeros((self.N, self.p))
 
         # Universal gravitational constant
         G = 6.67430E-11
         # Electrostatic constant
         k = 8.9875517887E9
-        # Collision force coefficient
-        cf = 1
+        # Collision Damping
+        # C_d = 0.9
 
         # Initialize countdown timer
         if debug:
@@ -351,23 +365,31 @@ class System:
                 # Distances between current sphere, and all others
                 dn = mod.linalg.norm(d2, axis = 1)[:,np.newaxis]
                 # Sum over total gravitational and Coulomb accelerations
-                a = self._a_inv_square(m1 = mass[n], m2 = m2, d2 = d2, dn = dn,
-                                       q1 = charge[n], q2 = q2, G = G, k = k,
-                                       mod = mod)
+                a_step[n] = self._a_inv_square(m1 = mass[n], m2 = m2, d2 = d2,
+                                               dn = dn, q1 = charge[n],
+                                               q2 = q2, G = G, k = k,
+                                               mod = mod)
                 if self.collision:
                     # Including acceleration from intersphere collisions
-                    a = a + self._a_collision(m1 = mass[n], m2 = m2,
-                        r1 = radius[n], r2 = r2, v1 = v[m-1,n], v2 = v2,
-                        w1 = w[m-1,n], w2 = w2, d2 = d2, dn = dn, cf = cf,
-                        mod = mod, dt = dt)
-
-                # Verlet half-step velocity
-                v_half[n] = v[m-1,n] + dt*0.5*a
-                # w_half[n] = w[m-1,n] + dt*0.5*a
-
+                    a_step[n] += C_d*self._a_collision(m1 = mass[n], m2 = m2,
+                                                       r1 = radius[n], r2 = r2,
+                                                       v1 = v[m-1,n], v2 = v2,
+                                                       w1 = w[m-1,n], w2 = w2,
+                                                       d2 = d2, dn = dn,
+                                                       mod = mod, dt = dt)
                 # Display countdown timer
                 if debug:
                     counter()
+
+            if self.field is not None:
+                # Include external forces
+                a_step += 1/mass*self.field(x = x[m-1], v = v[m-1], w = w[m-1],
+                                            m = mass, q = charge, r = radius,
+                                            t = dt*m)
+
+            # Verlet half-step velocity
+            v_half = v[m-1] + dt*0.5*a_step
+            # w_half[n] = w[m-1,n] + dt*0.5*a
 
             # Updating new position
             x[m] = x[m-1] + dt*v_half
@@ -390,26 +412,35 @@ class System:
                 # Distances between current sphere, and all others
                 dn = mod.linalg.norm(d2, axis = 1)[:,np.newaxis]
                 # Sum over total gravitational and Coulomb accelerations
-                a = self._a_inv_square(m1 = mass[n], m2 = m2, d2 = d2, dn = dn,
-                                       q1 = charge[n], q2 = q2, G = G, k = k,
-                                       mod = mod)
+                a_step[n] = self._a_inv_square(m1 = mass[n], m2 = m2, d2 = d2,
+                                               dn = dn, q1 = charge[n],
+                                               q2 = q2, G = G, k = k,
+                                               mod = mod)
                 if collision:
                     # Including acceleration from intersphere collisions
-                    a = a + self._a_collision(m1 = mass[n], m2 = m2,
-                        r1 = radius[n], r2 = r2, v1 = v_half[n], v2 = v2,
-                        w1 = w[m,n], w2 = w2, d2 = d2, dn = dn, cf = cf,
-                        mod = mod, dt = dt)
-
-                # Updating new velocity
-                v[m,n] = v_half[n] + dt*0.5*a
+                    a_step[n] += C_d*self._a_collision(m1 = mass[n], m2 = m2,
+                                                       r1 = radius[n], r2 = r2,
+                                                       v1 = v[m,n], v2 = v2,
+                                                       w1 = w[m,n], w2 = w2,
+                                                       d2 = d2, dn = dn,
+                                                       mod = mod, dt = dt)
 
                 # Display countdown timer
                 if debug:
                     counter()
 
+            if self.field is not None:
+                # Include external forces
+                a_step += 1/mass*self.field(x = x[m], v = v[m], w = w[m],
+                                            m = mass, q = charge, r = radius,
+                                            t = dt*m)
+
+            # Updating new velocity
+            v[m] = v_half + dt*0.5*a_step
+
             # Reversing velocities at boundaries
             if self.bounds.size != 0:
-                v[m] = self._bounds(x[m], v[m], radius, mod)
+                v[m] = self._bounds(x[m], v[m], radius, mod, C_d)
 
         # Display total time elapsed
         if debug:

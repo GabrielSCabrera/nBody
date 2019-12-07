@@ -1,2 +1,3 @@
-from .System import System
-from .Sphere import Sphere
+from .system import System
+from .sphere import Sphere
+from .field import Field
