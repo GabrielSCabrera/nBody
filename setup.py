@@ -5,7 +5,7 @@ import setuptools
 dependencies = ['numpy', 'matplotlib', 'ffmpeg', 'vpython']
 packages = ['nbody', 'nbody.core', 'nbody.lib', 'nbody.utils', 'nbody.config']
 
-with open('README.md') as f:
+with open('README.md', encoding='utf-8') as f:
     README = f.read()
 
 setuptools.setup(
