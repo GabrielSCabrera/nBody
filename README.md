@@ -24,7 +24,7 @@ Animated [```matplotlib```](https://matplotlib.org/ "Matplotlib") visualizations
 
 The package can be installed with the *python package installer*:
 
-    pip3 install nbody
+    python -m pip install nbody
 
 Using ```numpy``` arrays, you will need:
 
